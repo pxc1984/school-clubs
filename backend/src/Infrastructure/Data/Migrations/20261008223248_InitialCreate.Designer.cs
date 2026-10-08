@@ -13,7 +13,7 @@ using SchoolClubs.Infrastructure.Data;
 namespace SchoolClubs.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20261008221852_InitialCreate")]
+    [Migration("20261008223248_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -137,6 +137,10 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("description");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_archived");
 
                     b.Property<DateTimeOffset>("LastModified")
                         .HasColumnType("timestamp with time zone")

@@ -24,6 +24,9 @@ public class Group : IAuditableEntity
     public string Title { get; private set; } = string.Empty;
     public string? Description { get; private set; }
 
+    /// <summary>Прошлогодняя группа: скрыта из форм, но история отметок сохраняется.</summary>
+    public bool IsArchived { get; private set; }
+
     public IReadOnlyCollection<User> Teachers
     {
         get { return _teachers; }
@@ -45,6 +48,16 @@ public class Group : IAuditableEntity
 
         Title = title.Trim();
         Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
+    }
+
+    public void Archive()
+    {
+        IsArchived = true;
+    }
+
+    public void Restore()
+    {
+        IsArchived = false;
     }
 
     /// <summary>Привязывает учителя к группе (обе стороны связи).</summary>

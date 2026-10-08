@@ -70,29 +70,16 @@ public class UserTests
     }
 
     [Test]
-    public void GrantAndRevokeRole_RotateSecurityStamp()
+    public void GrantAndRevokeRole_KeepSecurityStamp()
     {
         var user = new User();
-        var initial = user.SecurityStamp;
-
-        user.GrantRole(UserRole.Admin);
-        var afterGrant = user.SecurityStamp;
-        user.RevokeRole(UserRole.Admin).ShouldBeTrue();
-
-        afterGrant.ShouldNotBe(initial);
-        user.SecurityStamp.ShouldNotBe(afterGrant);
-        user.HasRole(UserRole.Admin).ShouldBeFalse();
-    }
-
-    [Test]
-    public void GrantRole_Existing_KeepsSecurityStamp()
-    {
-        var user = new User(roles: [UserRole.Parent]);
         var stamp = user.SecurityStamp;
 
-        user.GrantRole(UserRole.Parent);
+        user.GrantRole(UserRole.Admin);
+        user.RevokeRole(UserRole.Admin).ShouldBeTrue();
 
         user.SecurityStamp.ShouldBe(stamp);
+        user.HasRole(UserRole.Admin).ShouldBeFalse();
     }
 
     [Test]
@@ -169,7 +156,6 @@ public class UserTests
 
         user.Unblock();
         user.IsBlocked.ShouldBeFalse();
-        user.SecurityStamp.ShouldNotBe(afterBlock);
     }
 
     [Test]

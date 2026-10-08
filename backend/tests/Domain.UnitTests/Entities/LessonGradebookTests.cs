@@ -66,4 +66,34 @@ public class LessonGradebookTests
         task.Entries.ShouldBeEmpty();
         gradebook.RemoveEntry(student.Id, task.Id).ShouldBeFalse();
     }
+
+    [Test]
+    public void MoveEntries_MovesToTarget_KeepsTargetOnConflict()
+    {
+        var lesson = NewLesson();
+        var first = lesson.AddTask();
+        var second = lesson.AddTask();
+        var gradebook = new LessonGradebook(lesson);
+        var duplicate = new Student("Пётр");
+        var original = new Student("Пётр");
+        gradebook.SetEntry(duplicate, first, GradebookEntryTaskStatus.Solved);
+        gradebook.SetEntry(duplicate, second, GradebookEntryTaskStatus.Solved);
+        gradebook.SetEntry(original, second, GradebookEntryTaskStatus.Unsolved);
+
+        gradebook.MoveEntries(duplicate, original).ShouldBe(1);
+
+        gradebook.EntriesOf(duplicate.Id).ShouldBeEmpty();
+        gradebook.FindEntry(original.Id, first.Id)!.Status.ShouldBe(GradebookEntryTaskStatus.Solved);
+        gradebook.FindEntry(original.Id, second.Id)!.Status.ShouldBe(GradebookEntryTaskStatus.Unsolved);
+        second.Entries.ShouldHaveSingleItem();
+    }
+
+    [Test]
+    public void MoveEntries_ToSameStudent_Throws()
+    {
+        var gradebook = new LessonGradebook(NewLesson());
+        var student = new Student("Пётр");
+
+        Should.Throw<ArgumentException>(() => gradebook.MoveEntries(student, student));
+    }
 }

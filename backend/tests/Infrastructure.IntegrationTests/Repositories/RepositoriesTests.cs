@@ -131,7 +131,6 @@ public class RepositoriesTests : TestBase
 
         var reloaded = await InScope(sp => sp.GetRequiredService<IUserRepository>().FindByIdAsync(_teacher.Id));
         reloaded!.Roles.ShouldBe([UserRole.Teacher]);
-        reloaded.SecurityStamp.ShouldNotBe(_teacher.SecurityStamp);
     }
 
     [Test]

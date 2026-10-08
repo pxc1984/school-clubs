@@ -19,4 +19,16 @@ public class LessonGradebookRepository(DbContext dbContext)
             .AsSplitQuery()
             .FirstOrDefaultAsync(g => g.LessonId == lessonId, cancellationToken);
     }
+
+    public async Task<IReadOnlyList<LessonGradebook>> ListByStudentAsync(Guid studentId,
+        CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Include(g => g.Lesson)
+            .ThenInclude(l => l.Tasks)
+            .Include(g => g.GradebookEntries)
+            .AsSplitQuery()
+            .Where(g => g.GradebookEntries.Any(e => e.StudentId == studentId))
+            .ToListAsync(cancellationToken);
+    }
 }

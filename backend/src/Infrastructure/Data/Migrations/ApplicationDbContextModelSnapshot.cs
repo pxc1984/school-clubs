@@ -135,6 +135,10 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("description");
 
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_archived");
+
                     b.Property<DateTimeOffset>("LastModified")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_modified");

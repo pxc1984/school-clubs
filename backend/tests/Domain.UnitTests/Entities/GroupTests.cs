@@ -78,4 +78,16 @@ public class GroupTests
         group.Students.Count.ShouldBe(1);
         group.HasStudent(student.Id).ShouldBeTrue();
     }
+
+    [Test]
+    public void ArchiveAndRestore()
+    {
+        var group = new Group("Робототехника");
+
+        group.Archive();
+        group.IsArchived.ShouldBeTrue();
+
+        group.Restore();
+        group.IsArchived.ShouldBeFalse();
+    }
 }

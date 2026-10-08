@@ -56,7 +56,10 @@ public class User : Profile
         get { return _linkedGroups; }
     }
 
-    /// <summary>Меняется при смене ролей, блокировке и сбросе пароля — выданные сессии перевыпускаются.</summary>
+    /// <summary>
+    /// Меняется при сбросе пароля и блокировке — все выданные сессии завершаются.
+    /// Смена ролей штамп не трогает: сессии перевыпускаются с новыми ролями без разлогина.
+    /// </summary>
     public string SecurityStamp { get; private set; } = NewSecurityStamp();
 
     public bool IsBlocked { get; private set; }
@@ -102,7 +105,6 @@ public class User : Profile
             return false;
 
         _roles.Add(new UserRoleGrant(role));
-        RotateSecurityStamp();
         return true;
     }
 
@@ -118,7 +120,6 @@ public class User : Profile
             throw new UserRoleException("parent role can't be revoked while user has children");
 
         _roles.RemoveAll(r => r.Role == role);
-        RotateSecurityStamp();
         return true;
     }
 
@@ -156,7 +157,6 @@ public class User : Profile
             return;
 
         IsBlocked = false;
-        RotateSecurityStamp();
     }
 
     public void AcceptConsent(string version, DateTimeOffset acceptedAt, string? ip = null)

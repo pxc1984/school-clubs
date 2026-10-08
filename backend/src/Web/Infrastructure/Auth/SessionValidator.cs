@@ -7,8 +7,8 @@ using SchoolClubs.Application.Services.Auth;
 namespace SchoolClubs.Web.Infrastructure.Auth;
 
 /// <summary>
-/// Периодически сверяет cookie с БД: заблокированного или удалённого пользователя выкидывает,
-/// при смене <c>SecurityStamp</c> (роли, сброс пароля) или статуса согласия перевыпускает клеймы.
+/// Периодически сверяет cookie с БД: заблокированного, удалённого пользователя или сессию со старым
+/// <c>SecurityStamp</c> (сброс пароля) завершает; при смене ролей или статуса согласия перевыпускает клеймы.
 /// </summary>
 public static class SessionValidator
 {
@@ -31,7 +31,7 @@ public static class SessionValidator
         var session = principal.GetUserId() is { } userId
             ? await services.GetRequiredService<IAuthService>().RefreshSessionAsync(userId, context.HttpContext.RequestAborted)
             : null;
-        if (session is null)
+        if (session is null || principal.FindFirstValue(SessionClaims.SecurityStamp) != session.SecurityStamp)
         {
             context.RejectPrincipal();
             await context.HttpContext.SignOutAsync(AuthSchemes.Session);
@@ -46,7 +46,8 @@ public static class SessionValidator
 
     private static bool IsOutdated(ClaimsPrincipal principal, SessionDto session)
     {
-        return principal.FindFirstValue(SessionClaims.SecurityStamp) != session.SecurityStamp
+        var roles = principal.FindAll(SessionClaims.Role).Select(c => c.Value).Order();
+        return !roles.SequenceEqual(session.Roles.Select(r => r.ToString()).Order())
                || principal.HasClaim(c => c.Type == SessionClaims.ConsentRequired) != session.ConsentRequired;
     }
 }

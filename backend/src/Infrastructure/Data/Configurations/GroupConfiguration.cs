@@ -26,6 +26,9 @@ public class GroupConfiguration : IEntityTypeConfiguration<Group>
             .Property(g => g.Description)
             .HasColumnName("description")
             .HasMaxLength(2000);
+        builder
+            .Property(g => g.IsArchived)
+            .HasColumnName("is_archived");
 
         builder
             .HasMany(g => g.Teachers)

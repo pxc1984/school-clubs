@@ -85,6 +85,32 @@ public class LessonGradebook : IAuditableEntity
         return true;
     }
 
+    /// <summary>
+    /// Переносит отметки дубля <paramref name="from"/> на <paramref name="to"/> (слияние учеников).
+    /// Если у <paramref name="to"/> уже есть отметка по той же задаче, остаётся она.
+    /// </summary>
+    /// <returns>Сколько отметок перенесено.</returns>
+    public int MoveEntries(Student from, Student to)
+    {
+        ArgumentNullException.ThrowIfNull(from);
+        ArgumentNullException.ThrowIfNull(to);
+        if (from.Id == to.Id)
+            throw new ArgumentException("can't move entries to the same student", nameof(to));
+
+        var moved = 0;
+        foreach (var entry in EntriesOf(from.Id))
+        {
+            RemoveEntry(from.Id, entry.TaskId);
+            if (FindEntry(to.Id, entry.TaskId) != null)
+                continue;
+
+            SetEntry(to, entry.Task, entry.Status);
+            moved++;
+        }
+
+        return moved;
+    }
+
     public GradebookEntry? FindEntry(Guid studentId, Guid taskId)
     {
         return _gradebookEntries.FirstOrDefault(e => e.StudentId == studentId && e.TaskId == taskId);

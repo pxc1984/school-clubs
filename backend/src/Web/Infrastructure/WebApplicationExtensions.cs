@@ -25,10 +25,29 @@ public static class WebApplicationExtensions
             .RequireAuthorization(Policies.User)
             .WithTags("Account"));
 
-        // Вход сервисного админа анонимный; остальные /admin/* — под политикой Admin (см. Policies).
-        AdminAuth.Map(v1
-            .MapGroup("/admin")
-            .WithTags("Admin"));
+        // Вход сервисного админа анонимный; остальные /admin/* — под политикой Admin.
+        var admin = v1.MapGroup("/admin");
+        AdminAuth.Map(admin.MapGroup("").WithTags("Admin"));
+        AdminGroups.Map(admin
+            .MapGroup("/groups")
+            .RequireAuthorization(Policies.Admin)
+            .WithTags("Admin: groups"));
+        AdminUsers.Map(admin
+            .MapGroup("/users")
+            .RequireAuthorization(Policies.Admin)
+            .WithTags("Admin: users"));
+        AdminUsers.MapTeachers(admin
+            .MapGroup("/teachers")
+            .RequireAuthorization(Policies.Admin)
+            .WithTags("Admin: users"));
+        AdminUsers.MapParents(admin
+            .MapGroup("/parents")
+            .RequireAuthorization(Policies.Admin)
+            .WithTags("Admin: users"));
+        AdminStudents.Map(admin
+            .MapGroup("/students")
+            .RequireAuthorization(Policies.Admin)
+            .WithTags("Admin: students"));
 
         return app;
     }

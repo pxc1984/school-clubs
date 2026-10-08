@@ -35,6 +35,7 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     title = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     description = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
+                    is_archived = table.Column<bool>(type: "boolean", nullable: false),
                     created = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     created_by = table.Column<Guid>(type: "uuid", nullable: true),
                     last_modified = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),

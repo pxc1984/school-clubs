@@ -15,6 +15,21 @@ public class GroupRepository(DbContext dbContext) : Repository<Group>(dbContext)
             .FirstOrDefaultAsync(g => g.Id == id, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Group>> ListWithMembersAsync(bool includeArchived,
+        CancellationToken cancellationToken = default)
+    {
+        var groups = DbSet.AsQueryable();
+        if (!includeArchived)
+            groups = groups.Where(g => !g.IsArchived);
+
+        return await groups
+            .Include(g => g.Teachers)
+            .Include(g => g.Students)
+            .AsSplitQuery()
+            .OrderBy(g => g.Title)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Group>> ListByTeacherAsync(Guid teacherId,
         CancellationToken cancellationToken = default)
     {
@@ -31,5 +46,20 @@ public class GroupRepository(DbContext dbContext) : Repository<Group>(dbContext)
             .Where(g => g.Students.Any(s => s.Id == studentId))
             .OrderBy(g => g.Title)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Group>> ListWithStudentsByStudentsAsync(IReadOnlyCollection<Guid> studentIds,
+        CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Include(g => g.Students)
+            .Where(g => g.Students.Any(s => studentIds.Contains(s.Id)))
+            .OrderBy(g => g.Title)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<bool> HasLessonsAsync(Guid groupId, CancellationToken cancellationToken = default)
+    {
+        return await DbContext.Set<Lesson>().AnyAsync(l => l.ParentGroupId == groupId, cancellationToken);
     }
 }
