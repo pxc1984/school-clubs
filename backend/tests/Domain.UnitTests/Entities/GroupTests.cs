@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using Shouldly;
+using SchoolClubs.Domain.Common.Exceptions;
 using SchoolClubs.Domain.Entities.Gradebook;
 using SchoolClubs.Domain.Entities.Users;
 
@@ -19,7 +20,7 @@ public class GroupTests
     public void AddTeacher_LinksBothSides()
     {
         var group = new Group("Робототехника");
-        var teacher = new Teacher("Иван");
+        var teacher = new User("Иван", roles: [UserRole.Teacher]);
 
         group.AddTeacher(teacher).ShouldBeTrue();
 
@@ -31,7 +32,7 @@ public class GroupTests
     public void AddTeacher_Twice_IsNoOp()
     {
         var group = new Group("Робототехника");
-        var teacher = new Teacher("Иван");
+        var teacher = new User("Иван", roles: [UserRole.Teacher]);
         group.AddTeacher(teacher);
 
         group.AddTeacher(teacher).ShouldBeFalse();
@@ -44,12 +45,25 @@ public class GroupTests
     public void RemoveTeacher_UnlinksBothSides()
     {
         var group = new Group("Робототехника");
-        var teacher = new Teacher("Иван", linkedGroups: [group]);
+        var teacher = new User("Иван", roles: [UserRole.Teacher]);
+        group.AddTeacher(teacher);
 
         group.RemoveTeacher(teacher).ShouldBeTrue();
 
         group.Teachers.ShouldBeEmpty();
         teacher.LinkedGroups.ShouldBeEmpty();
+    }
+
+    [Test]
+    public void AddTeacher_WithoutTeacherRole_Throws()
+    {
+        var group = new Group("Робототехника");
+        var user = new User("Иван", roles: [UserRole.Parent]);
+
+        Should.Throw<UserRoleException>(() => group.AddTeacher(user));
+
+        group.Teachers.ShouldBeEmpty();
+        user.LinkedGroups.ShouldBeEmpty();
     }
 
     [Test]

@@ -4,7 +4,7 @@ using SchoolClubs.Domain.Entities.Users;
 
 namespace SchoolClubs.Infrastructure.Data.Configurations;
 
-/// <summary>Иерархия профилей (Student, User, Parent, Teacher) хранится в одной таблице (TPH).</summary>
+/// <summary>Иерархия профилей (Student, User) хранится в одной таблице (TPH).</summary>
 public class ProfileConfiguration : IEntityTypeConfiguration<Profile>
 {
     public void Configure(EntityTypeBuilder<Profile> builder)
@@ -14,9 +14,7 @@ public class ProfileConfiguration : IEntityTypeConfiguration<Profile>
         builder
             .HasDiscriminator<string>("kind")
             .HasValue<Student>("student")
-            .HasValue<User>("user")
-            .HasValue<Parent>("parent")
-            .HasValue<Teacher>("teacher");
+            .HasValue<User>("user");
         builder
             .Property("kind")
             .HasColumnName("kind")

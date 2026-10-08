@@ -32,7 +32,7 @@ public class GroupConfiguration : IEntityTypeConfiguration<Group>
             .WithMany(t => t.LinkedGroups)
             .UsingEntity<Dictionary<string, object>>(
                 "group_teacher",
-                r => r.HasOne<Teacher>().WithMany().HasForeignKey("teacher_id"),
+                r => r.HasOne<User>().WithMany().HasForeignKey("teacher_id"),
                 l => l.HasOne<Group>().WithMany().HasForeignKey("group_id"),
                 j => j.HasKey("group_id", "teacher_id"));
         builder

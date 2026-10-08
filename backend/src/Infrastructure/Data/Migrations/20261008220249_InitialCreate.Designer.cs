@@ -13,7 +13,7 @@ using SchoolClubs.Infrastructure.Data;
 namespace SchoolClubs.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20261008211632_InitialCreate")]
+    [Migration("20261008220249_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -350,6 +350,63 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                     b.UseTphMappingStrategy();
                 });
 
+            modelBuilder.Entity("SchoolClubs.Domain.Entities.Users.UserLogin", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("Created")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset>("LastModified")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_modified");
+
+                    b.Property<Guid?>("LastModifiedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("last_modified_by");
+
+                    b.Property<DateTimeOffset?>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_used_at");
+
+                    b.Property<string>("PasswordHash")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("password_hash");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("ProviderKey")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("provider_key");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("Provider", "ProviderKey")
+                        .IsUnique();
+
+                    b.ToTable("user_login", (string)null);
+                });
+
             modelBuilder.Entity("group_student", b =>
                 {
                     b.Property<Guid>("group_id")
@@ -380,24 +437,29 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                     b.ToTable("group_teacher");
                 });
 
-            modelBuilder.Entity("parent_student", b =>
+            modelBuilder.Entity("user_child", b =>
                 {
-                    b.Property<Guid>("parent_id")
+                    b.Property<Guid>("user_id")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("student_id")
                         .HasColumnType("uuid");
 
-                    b.HasKey("parent_id", "student_id");
+                    b.HasKey("user_id", "student_id");
 
                     b.HasIndex("student_id");
 
-                    b.ToTable("parent_student");
+                    b.ToTable("user_child");
                 });
 
             modelBuilder.Entity("SchoolClubs.Domain.Entities.Users.Student", b =>
                 {
                     b.HasBaseType("SchoolClubs.Domain.Entities.Users.Profile");
+
+                    b.Property<string>("Grade")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("grade");
 
                     b.HasDiscriminator().HasValue("student");
                 });
@@ -406,34 +468,44 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                 {
                     b.HasBaseType("SchoolClubs.Domain.Entities.Users.Profile");
 
+                    b.Property<DateTimeOffset?>("ConsentAcceptedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("consent_accepted_at");
+
+                    b.Property<string>("ConsentIp")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)")
+                        .HasColumnName("consent_ip");
+
+                    b.Property<string>("ConsentVersion")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("consent_version");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(254)
                         .HasColumnType("character varying(254)")
                         .HasColumnName("email");
 
+                    b.Property<bool>("IsBlocked")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_blocked");
+
                     b.Property<string>("Phone")
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)")
                         .HasColumnName("phone");
 
+                    b.Property<string>("SecurityStamp")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("security_stamp");
+
                     b.HasIndex("Email");
 
                     b.HasDiscriminator().HasValue("user");
-                });
-
-            modelBuilder.Entity("SchoolClubs.Domain.Entities.Users.Parent", b =>
-                {
-                    b.HasBaseType("SchoolClubs.Domain.Entities.Users.User");
-
-                    b.HasDiscriminator().HasValue("parent");
-                });
-
-            modelBuilder.Entity("SchoolClubs.Domain.Entities.Users.Teacher", b =>
-                {
-                    b.HasBaseType("SchoolClubs.Domain.Entities.Users.User");
-
-                    b.HasDiscriminator().HasValue("teacher");
                 });
 
             modelBuilder.Entity("SchoolClubs.Domain.Entities.Gradebook.GradebookEntry", b =>
@@ -510,6 +582,15 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                     b.Navigation("Lesson");
                 });
 
+            modelBuilder.Entity("SchoolClubs.Domain.Entities.Users.UserLogin", b =>
+                {
+                    b.HasOne("SchoolClubs.Domain.Entities.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("group_student", b =>
                 {
                     b.HasOne("SchoolClubs.Domain.Entities.Gradebook.Group", null)
@@ -533,26 +614,49 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("SchoolClubs.Domain.Entities.Users.Teacher", null)
+                    b.HasOne("SchoolClubs.Domain.Entities.Users.User", null)
                         .WithMany()
                         .HasForeignKey("teacher_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("parent_student", b =>
+            modelBuilder.Entity("user_child", b =>
                 {
-                    b.HasOne("SchoolClubs.Domain.Entities.Users.Parent", null)
-                        .WithMany()
-                        .HasForeignKey("parent_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("SchoolClubs.Domain.Entities.Users.Student", null)
                         .WithMany()
                         .HasForeignKey("student_id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("SchoolClubs.Domain.Entities.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("user_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SchoolClubs.Domain.Entities.Users.User", b =>
+                {
+                    b.OwnsMany("SchoolClubs.Domain.Entities.Users.UserRoleGrant", "_roles", b1 =>
+                        {
+                            b1.Property<Guid>("user_id")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("Role")
+                                .HasMaxLength(16)
+                                .HasColumnType("character varying(16)")
+                                .HasColumnName("role");
+
+                            b1.HasKey("user_id", "Role");
+
+                            b1.ToTable("user_role", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("user_id");
+                        });
+
+                    b.Navigation("_roles");
                 });
 
             modelBuilder.Entity("SchoolClubs.Domain.Entities.Gradebook.Lesson", b =>

@@ -1,12 +1,13 @@
 using JetBrains.Annotations;
 using SchoolClubs.Domain.Common;
+using SchoolClubs.Domain.Common.Exceptions;
 using SchoolClubs.Domain.Entities.Users;
 
 namespace SchoolClubs.Domain.Entities.Gradebook;
 
 public class Group : IAuditableEntity
 {
-    private readonly List<Teacher> _teachers = [];
+    private readonly List<User> _teachers = [];
     private readonly List<Student> _students = [];
 
     public Group(string title, string? description = null)
@@ -23,7 +24,7 @@ public class Group : IAuditableEntity
     public string Title { get; private set; } = string.Empty;
     public string? Description { get; private set; }
 
-    public IReadOnlyCollection<Teacher> Teachers
+    public IReadOnlyCollection<User> Teachers
     {
         get { return _teachers; }
     }
@@ -48,9 +49,11 @@ public class Group : IAuditableEntity
 
     /// <summary>Привязывает учителя к группе (обе стороны связи).</summary>
     /// <returns><c>false</c>, если учитель уже привязан.</returns>
-    public bool AddTeacher(Teacher teacher)
+    /// <exception cref="UserRoleException">У пользователя нет роли <see cref="UserRole.Teacher"/>.</exception>
+    public bool AddTeacher(User teacher)
     {
         ArgumentNullException.ThrowIfNull(teacher);
+        UserRoleException.ThrowIfMissing(teacher, UserRole.Teacher);
         if (_teachers.Any(t => t.Id == teacher.Id))
             return false;
 
@@ -60,7 +63,7 @@ public class Group : IAuditableEntity
     }
 
     /// <returns><c>false</c>, если учитель не был привязан.</returns>
-    public bool RemoveTeacher(Teacher teacher)
+    public bool RemoveTeacher(User teacher)
     {
         ArgumentNullException.ThrowIfNull(teacher);
         if (_teachers.RemoveAll(t => t.Id == teacher.Id) == 0)

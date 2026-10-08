@@ -11,10 +11,10 @@ namespace SchoolClubs.Infrastructure.IntegrationTests.Repositories;
 public class RepositoriesTests : TestBase
 {
     private Group _group = null!;
-    private Teacher _teacher = null!;
+    private User _teacher = null!;
     private Student _alice = null!;
     private Student _bob = null!;
-    private Parent _parent = null!;
+    private User _parent = null!;
     private Lesson _lesson = null!;
     private DataEntry _file = null!;
 
@@ -22,12 +22,15 @@ public class RepositoriesTests : TestBase
     public async Task Seed()
     {
         _group = new Group("Робототехника");
-        _teacher = new Teacher("Иван", "Иванович", "Петров", "teacher@school218.ru", linkedGroups: [_group]);
+        _teacher = new User("Иван", "Иванович", "Петров", "teacher@school218.ru",
+            roles: [UserRole.Teacher, UserRole.Admin]);
+        _group.AddTeacher(_teacher);
         _alice = new Student("Алиса", lastName: "Андреева");
         _bob = new Student("Борис", lastName: "Борисов");
         _group.AddStudent(_alice);
         _group.AddStudent(_bob);
-        _parent = new Parent("Анна", email: "parent@school218.ru", children: [_alice]);
+        _parent = new User("Анна", email: "parent@school218.ru", roles: [UserRole.Parent]);
+        _parent.AddChild(_alice);
 
         _lesson = new Lesson(_group, new DateOnly(2026, 10, 1), new TimeOnly(15, 0));
         var task = _lesson.AddTask();
@@ -40,8 +43,10 @@ public class RepositoriesTests : TestBase
 
         await InScope(async sp =>
         {
-            await sp.GetRequiredService<ITeacherRepository>().AddAsync(_teacher);
-            await sp.GetRequiredService<IParentRepository>().AddAsync(_parent);
+            await sp.GetRequiredService<IUserRepository>().AddAsync(_teacher);
+            await sp.GetRequiredService<IUserRepository>().AddAsync(_parent);
+            await sp.GetRequiredService<IUserLoginRepository>()
+                .AddAsync(UserLogin.ForPassword(_parent, "Parent@School218.ru", "hash"));
             await sp.GetRequiredService<ILessonRepository>().AddAsync(laterLesson);
             await sp.GetRequiredService<ILessonGradebookRepository>().AddAsync(gradebook);
             await sp.GetRequiredService<IUnitOfWork>().SaveChangesAsync();
@@ -49,11 +54,13 @@ public class RepositoriesTests : TestBase
     }
 
     [Test]
-    public async Task UserRepository_FindByEmail_ReturnsDerivedUser()
+    public async Task UserRepository_FindByEmail_LoadsRolesAndStamp()
     {
         var user = await InScope(sp => sp.GetRequiredService<IUserRepository>().FindByEmailAsync("teacher@school218.ru"));
 
-        user.ShouldBeOfType<Teacher>().Id.ShouldBe(_teacher.Id);
+        user.ShouldNotBeNull().Id.ShouldBe(_teacher.Id);
+        user.Roles.ShouldBe([UserRole.Teacher, UserRole.Admin], ignoreOrder: true);
+        user.SecurityStamp.ShouldBe(_teacher.SecurityStamp);
     }
 
     [Test]
@@ -81,24 +88,62 @@ public class RepositoriesTests : TestBase
     }
 
     [Test]
-    public async Task TeacherRepository_GetWithGroups()
+    public async Task UserRepository_GetWithGroups()
     {
-        var teacher = await InScope(sp => sp.GetRequiredService<ITeacherRepository>().GetWithGroupsAsync(_teacher.Id));
+        var teacher = await InScope(sp => sp.GetRequiredService<IUserRepository>().GetWithGroupsAsync(_teacher.Id));
 
         teacher.ShouldNotBeNull();
         teacher.LinkedGroups.ShouldHaveSingleItem().Id.ShouldBe(_group.Id);
     }
 
     [Test]
-    public async Task ParentRepository_Queries()
+    public async Task UserRepository_ChildrenQueries()
     {
-        var parent = await InScope(sp => sp.GetRequiredService<IParentRepository>().GetWithChildrenAsync(_parent.Id));
+        var repo = (IServiceProvider sp) => sp.GetRequiredService<IUserRepository>();
+
+        var parent = await InScope(sp => repo(sp).GetWithChildrenAsync(_parent.Id));
         parent.ShouldNotBeNull();
         parent.Children.ShouldHaveSingleItem().Id.ShouldBe(_alice.Id);
 
-        var byChild = await InScope(sp => sp.GetRequiredService<IParentRepository>().ListByChildAsync(_alice.Id));
+        var byChild = await InScope(sp => repo(sp).ListByChildAsync(_alice.Id));
         byChild.ShouldHaveSingleItem().Id.ShouldBe(_parent.Id);
-        (await InScope(sp => sp.GetRequiredService<IParentRepository>().ListByChildAsync(_bob.Id))).ShouldBeEmpty();
+        (await InScope(sp => repo(sp).ListByChildAsync(_bob.Id))).ShouldBeEmpty();
+    }
+
+    [Test]
+    public async Task UserRepository_ListByRole()
+    {
+        var repo = (IServiceProvider sp) => sp.GetRequiredService<IUserRepository>();
+
+        (await InScope(sp => repo(sp).ListByRoleAsync(UserRole.Admin))).ShouldHaveSingleItem().Id.ShouldBe(_teacher.Id);
+        (await InScope(sp => repo(sp).ListByRoleAsync(UserRole.Parent))).ShouldHaveSingleItem().Id.ShouldBe(_parent.Id);
+    }
+
+    [Test]
+    public async Task UserRepository_RevokeRole_Persists()
+    {
+        await InScope(async sp =>
+        {
+            var user = await sp.GetRequiredService<IUserRepository>().FindByIdAsync(_teacher.Id);
+            user!.RevokeRole(UserRole.Admin).ShouldBeTrue();
+            await sp.GetRequiredService<IUnitOfWork>().SaveChangesAsync();
+        });
+
+        var reloaded = await InScope(sp => sp.GetRequiredService<IUserRepository>().FindByIdAsync(_teacher.Id));
+        reloaded!.Roles.ShouldBe([UserRole.Teacher]);
+        reloaded.SecurityStamp.ShouldNotBe(_teacher.SecurityStamp);
+    }
+
+    [Test]
+    public async Task UserLoginRepository_Queries()
+    {
+        var repo = (IServiceProvider sp) => sp.GetRequiredService<IUserLoginRepository>();
+
+        var login = await InScope(sp => repo(sp).FindAsync(LoginProvider.Password, " PARENT@school218.ru"));
+        login.ShouldNotBeNull().UserId.ShouldBe(_parent.Id);
+
+        (await InScope(sp => repo(sp).FindAsync(LoginProvider.Yandex, "parent@school218.ru"))).ShouldBeNull();
+        (await InScope(sp => repo(sp).ListByUserAsync(_parent.Id))).ShouldHaveSingleItem();
     }
 
     [Test]

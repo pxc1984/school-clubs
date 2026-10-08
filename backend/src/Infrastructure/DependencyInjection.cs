@@ -36,8 +36,7 @@ public static class DependencyInjection
         builder.Services.AddScoped<ILessonRepository, LessonRepository>();
         builder.Services.AddScoped<ILessonGradebookRepository, LessonGradebookRepository>();
         builder.Services.AddScoped<IUserRepository, UserRepository>();
-        builder.Services.AddScoped<IParentRepository, ParentRepository>();
-        builder.Services.AddScoped<ITeacherRepository, TeacherRepository>();
+        builder.Services.AddScoped<IUserLoginRepository, UserLoginRepository>();
         builder.Services.AddScoped<IStudentRepository, StudentRepository>();
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
