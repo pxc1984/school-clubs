@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <RootNamespace>SchoolClubs.Shared</RootNamespace>
+        <AssemblyName>SchoolClubs.Shared</AssemblyName>
+    </PropertyGroup>
+
+</Project>

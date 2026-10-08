@@ -1,0 +1,6 @@
+.svelte-kit/
+dist/
+build/
+pnpm-lock.yaml
+bin/
+obj/

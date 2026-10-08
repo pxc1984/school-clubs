@@ -1,0 +1,70 @@
+root = true
+
+# ============================================================
+# General
+# ============================================================
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 4
+tab_width = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.yml]
+indent_size = 2
+tab_width = 2
+
+# ============================================================
+# C#
+# ============================================================
+
+[*.cs]
+
+# Indentation
+csharp_indent_case_contents = true
+csharp_indent_switch_labels = true
+
+# Braces
+csharp_prefer_braces = false:warning
+csharp_new_line_before_open_brace = all
+
+# New lines around blocks
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+
+# Spaces
+csharp_space_after_comma = true
+csharp_space_before_comma = false
+csharp_space_after_cast = true
+csharp_space_before_colon_in_inheritance_clause = true
+csharp_space_after_colon_in_inheritance_clause = true
+
+# Using directives
+dotnet_sort_system_directives_first = true
+
+# Modifiers
+csharp_preferred_modifier_order = public, private, protected, internal, static, abstract, virtual, override, sealed, readonly, const, unsafe, new, partial, extern, async
+
+# var / explicit types
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:warning
+csharp_style_var_elsewhere = true:warning
+
+# Expression-bodied members
+csharp_style_expression_bodied_methods = false:warning
+csharp_style_expression_bodied_constructors = false:warning
+csharp_style_expression_bodied_operators = false:warning
+csharp_style_expression_bodied_properties = false:warning
+csharp_style_expression_bodied_accessors = false:warning
+
+# Null checks / modern syntax
+csharp_style_throw_expression = true:warning
+csharp_style_coalesce_expression = true:warning
+csharp_style_null_propagation = true:warning
+
+# Diagnostics
+dotnet_diagnostic.SA1005.severity = warning
