@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Net.Mail;
-using SchoolClubs.Domain.Common;
+using JetBrains.Annotations;
 using SchoolClubs.Domain.Common.Exceptions;
 
 namespace SchoolClubs.Domain.Entities.Users;
@@ -16,16 +16,33 @@ public class User : Profile
         string email = "invalid@school218.ru",
         string? phone = null) : base(firstName, middleName, lastName)
     {
+        ChangeEmail(email);
+        ChangePhone(phone);
+    }
+
+    [UsedImplicitly]
+    protected User()
+    {
+    }
+
+    public MailAddress Email { get; private set; } = null!;
+    public string? Phone { get; private set; }
+
+    public void ChangeEmail(string email)
+    {
         NamePartsException.ThrowIfHasParts(email);
 
         if (!MailAddress.TryCreate(email, out var emailAddress))
-            throw new ArgumentException("invalid email address passed");
-        if (!new PhoneAttribute().IsValid(phone)) throw new ArgumentException("invalid phone number passed");
+            throw new ArgumentException("invalid email address passed", nameof(email));
 
         Email = emailAddress;
-        Phone = phone;
     }
 
-    public MailAddress Email { get; set; }
-    public string? Phone { get; set; }
+    public void ChangePhone(string? phone)
+    {
+        if (!new PhoneAttribute().IsValid(phone))
+            throw new ArgumentException("invalid phone number passed", nameof(phone));
+
+        Phone = phone;
+    }
 }
