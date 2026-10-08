@@ -1,5 +1,6 @@
 using SchoolClubs.Web.Endpoints.v1.Account;
 using SchoolClubs.Web.Endpoints.v1.Admin;
+using SchoolClubs.Web.Endpoints.v1.Teacher;
 using SchoolClubs.Web.Endpoints.v1.TodoItems;
 using SchoolClubs.Web.Infrastructure.Auth;
 using AuthEndpoints = SchoolClubs.Web.Endpoints.v1.Auth.Auth;
@@ -48,6 +49,14 @@ public static class WebApplicationExtensions
             .MapGroup("/students")
             .RequireAuthorization(Policies.Admin)
             .WithTags("Admin: students"));
+
+        var teacher = v1.MapGroup("/teacher").RequireAuthorization(Policies.Teacher);
+        TeacherGroups.Map(teacher
+            .MapGroup("/groups")
+            .WithTags("Teacher: groups"));
+        TeacherLessons.Map(teacher
+            .MapGroup("/lessons")
+            .WithTags("Teacher: lessons"));
 
         return app;
     }

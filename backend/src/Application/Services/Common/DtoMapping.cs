@@ -1,9 +1,11 @@
 using SchoolClubs.Domain.Entities.Gradebook;
 using SchoolClubs.Domain.Entities.Users;
 
-namespace SchoolClubs.Application.Services.Admin;
+using SchoolClubs.Application.Services.Admin;
 
-internal static class AdminMapping
+namespace SchoolClubs.Application.Services.Common;
+
+internal static class DtoMapping
 {
     public static UserRefDto ToRef(this User user)
     {

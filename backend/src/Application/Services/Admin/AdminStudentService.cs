@@ -1,4 +1,5 @@
 using FluentValidation;
+using SchoolClubs.Application.Services.Common;
 using SchoolClubs.Application.Common.Exceptions;
 using SchoolClubs.Domain.Abstractions;
 using SchoolClubs.Domain.Entities.Users;
@@ -65,7 +66,7 @@ public class AdminStudentService(
         await ValidateAsync(updateValidator, request, cancellationToken);
 
         var student = await FindAsync(id);
-        student.Rename(request.FirstName.Trim(), AdminMapping.NullIfBlank(request.MiddleName), request.LastName.Trim());
+        student.Rename(request.FirstName.Trim(), DtoMapping.NullIfBlank(request.MiddleName), request.LastName.Trim());
         student.ChangeGrade(request.Grade);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return await ToDetailsAsync(student, cancellationToken);

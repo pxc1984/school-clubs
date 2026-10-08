@@ -22,6 +22,10 @@ public class LessonConfiguration : IEntityTypeConfiguration<Lesson>
         builder
             .Property(l => l.Time)
             .HasColumnName("time");
+        builder
+            .Property(l => l.Topic)
+            .HasColumnName("topic")
+            .HasMaxLength(Lesson.TopicMaxLength);
 
         builder
             .Property(l => l.ParentGroupId)
@@ -31,6 +35,8 @@ public class LessonConfiguration : IEntityTypeConfiguration<Lesson>
             .WithMany()
             .HasForeignKey(l => l.ParentGroupId)
             .OnDelete(DeleteBehavior.Cascade);
+        // Списки занятий группы по датам.
+        builder.HasIndex(l => new { l.ParentGroupId, l.Date });
 
         builder
             .HasMany(l => l.Tasks)

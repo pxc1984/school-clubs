@@ -47,6 +47,13 @@ public class GradebookEntryConfiguration : IEntityTypeConfiguration<GradebookEnt
             .HasConversion<string>()
             .HasMaxLength(32);
         builder.Ignore(e => e.IsSolved);
+        builder
+            .Property(e => e.Comment)
+            .HasColumnName("comment")
+            .HasMaxLength(GradebookEntry.CommentMaxLength);
+
+        // Статистика ученика по занятиям.
+        builder.HasIndex(e => new { e.StudentId, e.LessonId });
 
         builder.HasAuditColumns();
     }

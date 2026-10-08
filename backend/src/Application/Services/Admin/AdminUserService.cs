@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using FluentValidation;
+using SchoolClubs.Application.Services.Common;
 using SchoolClubs.Application.Common.Exceptions;
 using SchoolClubs.Application.Common.Interfaces;
 using SchoolClubs.Domain.Abstractions;
@@ -94,7 +95,7 @@ public class AdminUserService(
             return await GetAsync(existing.Id, cancellationToken);
         }
 
-        var teacher = new User(request.FirstName.Trim(), AdminMapping.NullIfBlank(request.MiddleName),
+        var teacher = new User(request.FirstName.Trim(), DtoMapping.NullIfBlank(request.MiddleName),
             request.LastName.Trim(), request.Email, roles: [UserRole.Teacher]);
         await users.AddAsync(teacher, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);

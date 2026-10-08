@@ -20,6 +20,15 @@ public class LessonGradebookRepository(DbContext dbContext)
             .FirstOrDefaultAsync(g => g.LessonId == lessonId, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<LessonGradebook>> ListByGroupAsync(Guid groupId,
+        CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Include(g => g.GradebookEntries)
+            .Where(g => g.Lesson.ParentGroupId == groupId)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<LessonGradebook>> ListByStudentAsync(Guid studentId,
         CancellationToken cancellationToken = default)
     {

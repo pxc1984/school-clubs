@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using Shouldly;
 using SchoolClubs.Domain.Entities.Gradebook;
+using Task = SchoolClubs.Domain.Entities.Gradebook.Task;
 
 namespace SchoolClubs.Domain.UnitTests.Entities;
 
@@ -48,5 +49,28 @@ public class LessonTests
 
         lesson.Tasks.ShouldBe([first, third]);
         third.Order.ShouldBe(2);
+    }
+
+    [Test]
+    public void Topic_IsTrimmed_BlankBecomesNull_TooLongThrows()
+    {
+        var lesson = new Lesson(new Group("Шахматы"), Date, null, "  Дебюты ");
+        lesson.Topic.ShouldBe("Дебюты");
+
+        lesson.ChangeTopic("   ");
+        lesson.Topic.ShouldBeNull();
+
+        Should.Throw<ArgumentException>(() => lesson.ChangeTopic(new string('a', Lesson.TopicMaxLength + 1)));
+    }
+
+    [Test]
+    public void Task_Rename()
+    {
+        var task = new Lesson(new Group("Шахматы"), Date, null).AddTask();
+
+        task.Rename(" Вилка ");
+        task.Title.ShouldBe("Вилка");
+
+        Should.Throw<ArgumentException>(() => task.Rename(new string('a', Domain.Entities.Gradebook.Task.TitleMaxLength + 1)));
     }
 }

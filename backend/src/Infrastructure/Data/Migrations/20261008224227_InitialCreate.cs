@@ -97,6 +97,7 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     date = table.Column<DateOnly>(type: "date", nullable: false),
                     time = table.Column<TimeOnly>(type: "time without time zone", nullable: true),
+                    topic = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
                     parent_group_id = table.Column<Guid>(type: "uuid", nullable: false),
                     created = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     created_by = table.Column<Guid>(type: "uuid", nullable: true),
@@ -237,6 +238,7 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     lesson_id = table.Column<Guid>(type: "uuid", nullable: false),
                     data_entry_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    published_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     created = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     created_by = table.Column<Guid>(type: "uuid", nullable: true),
                     last_modified = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
@@ -266,6 +268,7 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     order = table.Column<long>(type: "bigint", nullable: false),
+                    title = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
                     lesson_id = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
@@ -287,6 +290,7 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                     task_id = table.Column<Guid>(type: "uuid", nullable: false),
                     lesson_id = table.Column<Guid>(type: "uuid", nullable: false),
                     status = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    comment = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     created = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     created_by = table.Column<Guid>(type: "uuid", nullable: true),
                     last_modified = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
@@ -327,9 +331,9 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                 column: "lesson_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_gradebook_entry_student_id",
+                name: "IX_gradebook_entry_student_id_lesson_id",
                 table: "gradebook_entry",
-                column: "student_id");
+                columns: new[] { "student_id", "lesson_id" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_group_student_student_id",
@@ -342,9 +346,9 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                 column: "teacher_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_lesson_parent_group_id",
+                name: "IX_lesson_parent_group_id_date",
                 table: "lesson",
-                column: "parent_group_id");
+                columns: new[] { "parent_group_id", "date" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_lesson_gradebook_data_entry_id",

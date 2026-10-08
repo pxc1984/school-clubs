@@ -1,12 +1,7 @@
+using SchoolClubs.Application.Services.Common;
 using SchoolClubs.Domain.Entities.Users;
 
 namespace SchoolClubs.Application.Services.Admin;
-
-public record UserRefDto(Guid Id, string LastName, string FirstName, string MiddleName);
-
-public record StudentDto(Guid Id, string LastName, string FirstName, string MiddleName, string? Grade);
-
-public record GroupRefDto(Guid Id, string Title, bool IsArchived);
 
 // Группы
 

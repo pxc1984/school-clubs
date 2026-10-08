@@ -37,6 +37,11 @@ public class LessonGradebookConfiguration : IEntityTypeConfiguration<LessonGrade
             .OnDelete(DeleteBehavior.SetNull);
 
         builder
+            .Property(g => g.PublishedAt)
+            .HasColumnName("published_at");
+        builder.Ignore(g => g.IsPublished);
+
+        builder
             .HasMany(g => g.GradebookEntries)
             .WithOne()
             .HasForeignKey(e => e.LessonId)

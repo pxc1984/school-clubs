@@ -81,6 +81,11 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("student_id");
 
+                    b.Property<string>("Comment")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("comment");
+
                     b.Property<DateTimeOffset>("Created")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created");
@@ -111,7 +116,7 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
 
                     b.HasIndex("LessonId");
 
-                    b.HasIndex("StudentId");
+                    b.HasIndex("StudentId", "LessonId");
 
                     b.ToTable("gradebook_entry", (string)null);
                 });
@@ -192,9 +197,14 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                         .HasColumnType("time without time zone")
                         .HasColumnName("time");
 
+                    b.Property<string>("Topic")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("topic");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("ParentGroupId");
+                    b.HasIndex("ParentGroupId", "Date");
 
                     b.ToTable("lesson", (string)null);
                 });
@@ -229,6 +239,10 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("lesson_id");
 
+                    b.Property<DateTimeOffset?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("published_at");
+
                     b.HasKey("Id");
 
                     b.HasIndex("DataEntryId");
@@ -249,6 +263,11 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                     b.Property<long>("Order")
                         .HasColumnType("bigint")
                         .HasColumnName("order");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
 
                     b.HasKey("Id");
 

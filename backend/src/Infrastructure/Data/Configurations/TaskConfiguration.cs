@@ -25,6 +25,10 @@ public class TaskConfiguration : IEntityTypeConfiguration<Task>
         builder
             .Property(t => t.LessonId)
             .HasColumnName("lesson_id");
+        builder
+            .Property(t => t.Title)
+            .HasColumnName("title")
+            .HasMaxLength(Task.TitleMaxLength);
 
         builder
             .Navigation(t => t.Entries)

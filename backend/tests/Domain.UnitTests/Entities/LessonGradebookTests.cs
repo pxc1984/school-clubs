@@ -96,4 +96,61 @@ public class LessonGradebookTests
 
         Should.Throw<ArgumentException>(() => gradebook.MoveEntries(student, student));
     }
+
+    [Test]
+    public void SetEntry_StoresAndOverwritesComment()
+    {
+        var lesson = NewLesson();
+        var task = lesson.AddTask("Рекурсия");
+        var gradebook = new LessonGradebook(lesson);
+        var student = new Student("Пётр");
+
+        gradebook.SetEntry(student, task, GradebookEntryTaskStatus.SolvedWithRemarks, "  забыл базу рекурсии ");
+        gradebook.FindEntry(student.Id, task.Id)!.Comment.ShouldBe("забыл базу рекурсии");
+
+        gradebook.SetEntry(student, task, GradebookEntryTaskStatus.Solved);
+        gradebook.FindEntry(student.Id, task.Id)!.Comment.ShouldBeNull();
+        task.Title.ShouldBe("Рекурсия");
+    }
+
+    [Test]
+    public void SetEntry_TooLongComment_Throws()
+    {
+        var lesson = NewLesson();
+        var task = lesson.AddTask();
+        var gradebook = new LessonGradebook(lesson);
+
+        Should.Throw<ArgumentException>(() => gradebook.SetEntry(new Student("Пётр"), task,
+            GradebookEntryTaskStatus.Solved, new string('a', GradebookEntry.CommentMaxLength + 1)));
+    }
+
+    [Test]
+    public void Publish_KeepsFirstDate_UnpublishClears()
+    {
+        var gradebook = new LessonGradebook(NewLesson());
+        var first = new DateTimeOffset(2026, 10, 8, 18, 0, 0, TimeSpan.Zero);
+
+        gradebook.IsPublished.ShouldBeFalse();
+        gradebook.Publish(first);
+        gradebook.Publish(first.AddHours(1));
+        gradebook.PublishedAt.ShouldBe(first);
+
+        gradebook.Unpublish();
+        gradebook.IsPublished.ShouldBeFalse();
+    }
+
+    [Test]
+    public void MoveEntries_CarriesComment()
+    {
+        var lesson = NewLesson();
+        var task = lesson.AddTask();
+        var gradebook = new LessonGradebook(lesson);
+        var duplicate = new Student("Пётр");
+        var original = new Student("Пётр");
+        gradebook.SetEntry(duplicate, task, GradebookEntryTaskStatus.UnsolvedWithRemarks, "почти");
+
+        gradebook.MoveEntries(duplicate, original);
+
+        gradebook.FindEntry(original.Id, task.Id)!.Comment.ShouldBe("почти");
+    }
 }

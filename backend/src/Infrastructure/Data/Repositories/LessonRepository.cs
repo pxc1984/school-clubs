@@ -13,6 +13,17 @@ public class LessonRepository(DbContext dbContext) : Repository<Lesson>(dbContex
             .FirstOrDefaultAsync(l => l.Id == id, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Lesson>> ListWithTasksByGroupAsync(Guid groupId,
+        CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Include(l => l.Tasks)
+            .Where(l => l.ParentGroupId == groupId)
+            .OrderBy(l => l.Date)
+            .ThenBy(l => l.Time)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Lesson>> ListByGroupAsync(
         Guid groupId,
         DateOnly? from = null,

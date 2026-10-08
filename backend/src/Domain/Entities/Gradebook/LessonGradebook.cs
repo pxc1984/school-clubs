@@ -35,6 +35,14 @@ public class LessonGradebook : IAuditableEntity
     public Guid? DataEntryId { get; private set; }
     public DataEntry? StoredFile { get; private set; }
 
+    /// <summary>Пока <c>null</c>, журнал — черновик и родители его не видят.</summary>
+    public DateTimeOffset? PublishedAt { get; private set; }
+
+    public bool IsPublished
+    {
+        get { return PublishedAt is not null; }
+    }
+
     public IReadOnlyCollection<GradebookEntry> GradebookEntries
     {
         get { return _gradebookEntries; }
@@ -52,8 +60,23 @@ public class LessonGradebook : IAuditableEntity
         StoredFile = dataEntry;
     }
 
-    /// <summary>Создаёт запись для пары (ученик, задача) или обновляет статус существующей.</summary>
-    public GradebookEntry SetEntry(Student student, Task task, GradebookEntryTaskStatus status)
+    /// <summary>Открывает журнал родителям. Повторная публикация сохраняет исходную дату.</summary>
+    public void Publish(DateTimeOffset publishedAt)
+    {
+        PublishedAt ??= publishedAt;
+    }
+
+    /// <summary>Снимает с публикации — для крупной переделки журнала.</summary>
+    public void Unpublish()
+    {
+        PublishedAt = null;
+    }
+
+    /// <summary>Создаёт запись для пары (ученик, задача) или обновляет статус и замечание существующей.</summary>
+    public GradebookEntry SetEntry(Student student,
+        Task task,
+        GradebookEntryTaskStatus status,
+        string? comment = null)
     {
         ArgumentNullException.ThrowIfNull(student);
         ArgumentNullException.ThrowIfNull(task);
@@ -64,10 +87,11 @@ public class LessonGradebook : IAuditableEntity
         if (entry != null)
         {
             entry.ChangeStatus(status);
+            entry.ChangeComment(comment);
             return entry;
         }
 
-        entry = new GradebookEntry(Lesson, student, task, status);
+        entry = new GradebookEntry(Lesson, student, task, status, comment);
         _gradebookEntries.Add(entry);
         task.AttachEntry(entry);
         return entry;
@@ -104,7 +128,7 @@ public class LessonGradebook : IAuditableEntity
             if (FindEntry(to.Id, entry.TaskId) != null)
                 continue;
 
-            SetEntry(to, entry.Task, entry.Status);
+            SetEntry(to, entry.Task, entry.Status, entry.Comment);
             moved++;
         }
 

@@ -1,9 +1,12 @@
+using System.Text.Json.Serialization;
 using JetBrains.Annotations;
 using SchoolClubs.Domain.Common;
 using SchoolClubs.Domain.Entities.Users;
 
 namespace SchoolClubs.Domain.Entities.Gradebook;
 
+/// <remarks>В JSON — строкой (<c>"SolvedWithRemarks"</c>).</remarks>
+[JsonConverter(typeof(JsonStringEnumConverter<GradebookEntryTaskStatus>))]
 public enum GradebookEntryTaskStatus
 {
     UnsolvedWithRemarks,
@@ -15,7 +18,13 @@ public enum GradebookEntryTaskStatus
 /// <summary>Отметка о решении задачи учеником. Создаётся через <see cref="LessonGradebook.SetEntry"/>.</summary>
 public class GradebookEntry : IAuditableEntity
 {
-    internal GradebookEntry(Lesson lesson, Student student, Task task, GradebookEntryTaskStatus status)
+    public const int CommentMaxLength = 500;
+
+    internal GradebookEntry(Lesson lesson,
+        Student student,
+        Task task,
+        GradebookEntryTaskStatus status,
+        string? comment)
     {
         LessonId = lesson.Id;
         Lesson = lesson;
@@ -24,6 +33,7 @@ public class GradebookEntry : IAuditableEntity
         TaskId = task.Id;
         Task = task;
         ChangeStatus(status);
+        ChangeComment(comment);
     }
 
     [UsedImplicitly]
@@ -42,6 +52,9 @@ public class GradebookEntry : IAuditableEntity
 
     public GradebookEntryTaskStatus Status { get; private set; }
 
+    /// <summary>Замечание учителя к решению — сама «обратная связь» родителю.</summary>
+    public string? Comment { get; private set; }
+
     public bool IsSolved
     {
         get { return Status is GradebookEntryTaskStatus.Solved or GradebookEntryTaskStatus.SolvedWithRemarks; }
@@ -58,5 +71,14 @@ public class GradebookEntry : IAuditableEntity
             throw new ArgumentOutOfRangeException(nameof(status), status, "unknown task status");
 
         Status = status;
+    }
+
+    internal void ChangeComment(string? comment)
+    {
+        var trimmed = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim();
+        if (trimmed?.Length > CommentMaxLength)
+            throw new ArgumentException($"comment shouldn't be longer than {CommentMaxLength}", nameof(comment));
+
+        Comment = trimmed;
     }
 }
