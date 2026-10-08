@@ -67,8 +67,11 @@ public class User : Profile
     public string? ConsentVersion { get; private set; }
     public string? ConsentIp { get; private set; }
 
+    /// <summary>Email хранится в нижнем регистре: по нему ищут аккаунт при входе и регистрации.</summary>
     public void ChangeEmail(string email)
     {
+        ArgumentNullException.ThrowIfNull(email);
+        email = email.Trim().ToLowerInvariant();
         NamePartsException.ThrowIfHasParts(email);
 
         if (!MailAddress.TryCreate(email, out var emailAddress))

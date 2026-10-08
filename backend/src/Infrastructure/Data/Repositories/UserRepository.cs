@@ -9,7 +9,8 @@ public class UserRepository(DbContext dbContext) : Repository<User>(dbContext), 
 {
     public async Task<User?> FindByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
-        if (!MailAddress.TryCreate(email, out var address))
+        // Email в User хранится в нижнем регистре (см. User.ChangeEmail).
+        if (!MailAddress.TryCreate(email.Trim().ToLowerInvariant(), out var address))
             return null;
 
         // Сравнение идёт по сконвертированному значению колонки (MailAddress.Address).

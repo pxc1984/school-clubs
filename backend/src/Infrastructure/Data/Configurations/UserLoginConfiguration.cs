@@ -28,10 +28,8 @@ public class UserLoginConfiguration : IEntityTypeConfiguration<UserLogin>
         builder
             .Property(l => l.Provider)
             .HasColumnName("provider")
-            .HasConversion(
-                provider => provider.ToString().ToLowerInvariant(),
-                value => Enum.Parse<LoginProvider>(value, true))
-            .HasMaxLength(16);
+            .HasMaxLength(UserLogin.ProviderMaxLength)
+            .IsRequired();
         builder
             .Property(l => l.ProviderKey)
             .HasColumnName("provider_key")

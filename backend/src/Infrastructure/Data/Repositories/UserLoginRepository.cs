@@ -6,14 +6,15 @@ namespace SchoolClubs.Infrastructure.Data.Repositories;
 
 public class UserLoginRepository(DbContext dbContext) : Repository<UserLogin>(dbContext), IUserLoginRepository
 {
-    public async Task<UserLogin?> FindAsync(LoginProvider provider, string providerKey,
+    public async Task<UserLogin?> FindAsync(string provider, string providerKey,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(providerKey))
+        if (string.IsNullOrWhiteSpace(provider) || string.IsNullOrWhiteSpace(providerKey))
             return null;
 
-        var key = UserLogin.NormalizeKey(provider, providerKey);
-        return await DbSet.FirstOrDefaultAsync(l => l.Provider == provider && l.ProviderKey == key,
+        var normalizedProvider = UserLogin.NormalizeProvider(provider);
+        var key = UserLogin.NormalizeKey(normalizedProvider, providerKey);
+        return await DbSet.FirstOrDefaultAsync(l => l.Provider == normalizedProvider && l.ProviderKey == key,
             cancellationToken);
     }
 

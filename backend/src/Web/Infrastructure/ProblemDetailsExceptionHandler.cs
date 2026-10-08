@@ -31,11 +31,26 @@ public class ProblemDetailsExceptionHandler : IExceptionHandler
                 Title = "Unauthorized",
                 Type = "https://tools.ietf.org/html/rfc9110#section-15.5.2",
             }),
-            ForbiddenAccessException => (StatusCodes.Status403Forbidden, new ProblemDetails
+            ForbiddenAccessException fe => (StatusCodes.Status403Forbidden, WithCode(new ProblemDetails
             {
                 Status = StatusCodes.Status403Forbidden,
                 Title = "Forbidden",
                 Type = "https://tools.ietf.org/html/rfc9110#section-15.5.4",
+            }, fe.Code)),
+            ConflictException ce => (StatusCodes.Status409Conflict, new ProblemDetails
+            {
+                Status = StatusCodes.Status409Conflict,
+                Title = "Conflict",
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.10",
+                Detail = ce.Message,
+            }),
+            // Нарушение доменных инвариантов (сущности бросают ArgumentException и наследников).
+            ArgumentException ae => (StatusCodes.Status400BadRequest, new ProblemDetails
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Bad request",
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+                Detail = ae.Message,
             }),
             _ => (-1, null),
         };
@@ -46,5 +61,12 @@ public class ProblemDetailsExceptionHandler : IExceptionHandler
         // runtime-тип, иначе System.Text.Json отбросит Errors у ValidationProblemDetails
         await httpContext.Response.WriteAsJsonAsync(problemDetails, problemDetails.GetType(), cancellationToken);
         return true;
+    }
+
+    private static ProblemDetails WithCode(ProblemDetails problemDetails, string? code)
+    {
+        if (code is not null)
+            problemDetails.Extensions["code"] = code;
+        return problemDetails;
     }
 }

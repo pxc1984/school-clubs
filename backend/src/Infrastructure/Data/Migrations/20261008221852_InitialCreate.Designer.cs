@@ -13,7 +13,7 @@ using SchoolClubs.Infrastructure.Data;
 namespace SchoolClubs.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20261008220249_InitialCreate")]
+    [Migration("20261008221852_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -383,8 +383,8 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
 
                     b.Property<string>("Provider")
                         .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("character varying(16)")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
                         .HasColumnName("provider");
 
                     b.Property<string>("ProviderKey")

@@ -35,6 +35,16 @@ public class UserTests
     }
 
     [Test]
+    public void ChangeEmail_NormalizesCaseAndSpaces()
+    {
+        var user = new User();
+
+        user.ChangeEmail(" Teacher@School218.RU ");
+
+        user.Email.Address.ShouldBe("teacher@school218.ru");
+    }
+
+    [Test]
     public void New_WithRoles_CombinesThem()
     {
         var user = new User(roles: [UserRole.Parent, UserRole.Teacher, UserRole.Admin]);

@@ -139,10 +139,10 @@ public class RepositoriesTests : TestBase
     {
         var repo = (IServiceProvider sp) => sp.GetRequiredService<IUserLoginRepository>();
 
-        var login = await InScope(sp => repo(sp).FindAsync(LoginProvider.Password, " PARENT@school218.ru"));
+        var login = await InScope(sp => repo(sp).FindAsync(UserLogin.PasswordProvider, " PARENT@school218.ru"));
         login.ShouldNotBeNull().UserId.ShouldBe(_parent.Id);
 
-        (await InScope(sp => repo(sp).FindAsync(LoginProvider.Yandex, "parent@school218.ru"))).ShouldBeNull();
+        (await InScope(sp => repo(sp).FindAsync("yandex", "parent@school218.ru"))).ShouldBeNull();
         (await InScope(sp => repo(sp).ListByUserAsync(_parent.Id))).ShouldHaveSingleItem();
     }
 
@@ -212,17 +212,5 @@ public class RepositoriesTests : TestBase
         found.ShouldNotBeNull().Id.ShouldBe(_file.Id);
 
         (await InScope(sp => repo(sp).FindByLocationAsync(new S3Location("gradebooks", "missing")))).ShouldBeNull();
-    }
-
-    private static async Task<T> InScope<T>(Func<IServiceProvider, Task<T>> action)
-    {
-        using var scope = FunctionalTestSetup.ScopeFactory.CreateScope();
-        return await action(scope.ServiceProvider);
-    }
-
-    private static async Task InScope(Func<IServiceProvider, Task> action)
-    {
-        using var scope = FunctionalTestSetup.ScopeFactory.CreateScope();
-        await action(scope.ServiceProvider);
     }
 }

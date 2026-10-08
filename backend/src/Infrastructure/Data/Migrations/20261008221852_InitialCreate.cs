@@ -191,7 +191,7 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     user_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    provider = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: false),
+                    provider = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
                     provider_key = table.Column<string>(type: "character varying(254)", maxLength: 254, nullable: false),
                     password_hash = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
                     last_used_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),

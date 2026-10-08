@@ -380,8 +380,8 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
 
                     b.Property<string>("Provider")
                         .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("character varying(16)")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
                         .HasColumnName("provider");
 
                     b.Property<string>("ProviderKey")

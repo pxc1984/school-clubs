@@ -2,10 +2,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using SchoolClubs.Application.Common.Interfaces;
 using SchoolClubs.Domain.Abstractions;
 using SchoolClubs.Infrastructure.Data;
 using SchoolClubs.Infrastructure.Data.Interceptors;
 using SchoolClubs.Infrastructure.Data.Repositories;
+using SchoolClubs.Infrastructure.Identity;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -39,6 +41,8 @@ public static class DependencyInjection
         builder.Services.AddScoped<IUserLoginRepository, UserLoginRepository>();
         builder.Services.AddScoped<IStudentRepository, StudentRepository>();
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+        builder.Services.AddSingleton<IPasswordHasher, PasswordHasher>();
 
         builder.Services.AddScoped<ApplicationDbContextInitialiser>();
     }

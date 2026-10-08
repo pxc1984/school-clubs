@@ -52,6 +52,14 @@ services:
       - Logging__LogLevel__Default=${Logging__LogLevel__Default:-Information}
       # собирается из POSTGRES_* — отдельно задавать строку подключения не нужно
       - ConnectionStrings__SchoolClubsDb=Server=db;Port=5432;Database=${POSTGRES_DB:-db};Username=${POSTGRES_USER:-admin};Password=${POSTGRES_PASSWORD:-password}
+      - Auth__ServiceAdminPassword=${Auth__ServiceAdminPassword:-}
+      - Auth__ConsentVersion=${Auth__ConsentVersion:-1}
+      - Auth__Oidc__yandex__ClientId=${Auth__Oidc__yandex__ClientId:-}
+      - Auth__Oidc__yandex__ClientSecret=${Auth__Oidc__yandex__ClientSecret:-}
+      # ключи шифрования cookie переживают пересоздание контейнера
+      - DataProtection__KeysPath=/app/keys
+    volumes:
+      - dp_keys:/app/keys
     depends_on:
       db:
         condition: service_healthy
@@ -83,6 +91,8 @@ services:
 
 volumes:
   db_data:
+    driver: local
+  dp_keys:
     driver: local
 
 networks:

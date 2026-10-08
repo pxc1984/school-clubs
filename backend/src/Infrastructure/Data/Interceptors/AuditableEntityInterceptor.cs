@@ -1,12 +1,14 @@
-using System.Security.Claims;
+using SchoolClubs.Application.Common.Interfaces;
 using SchoolClubs.Domain.Common;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace SchoolClubs.Infrastructure.Data.Interceptors;
 
-public class AuditableEntityInterceptor(IHttpContextAccessor httpContextAccessor) : SaveChangesInterceptor
+/// <summary>
+/// Проставляет аудит. Действия сервисного админа и фоновые операции пишутся с <c>CreatedBy = null</c>.
+/// </summary>
+public class AuditableEntityInterceptor(ICurrentUser currentUser) : SaveChangesInterceptor
 {
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
     {
@@ -27,7 +29,7 @@ public class AuditableEntityInterceptor(IHttpContextAccessor httpContextAccessor
         if (context is null) return;
 
         var utcNow = DateTimeOffset.UtcNow;
-        var userId = GetUserId();
+        var userId = currentUser.UserId;
 
         foreach (var entry in context.ChangeTracker.Entries<IAuditableEntity>())
         {
@@ -43,14 +45,5 @@ public class AuditableEntityInterceptor(IHttpContextAccessor httpContextAccessor
                 entry.Entity.LastModifiedBy = userId;
             }
         }
-    }
-
-    private Guid? GetUserId()
-    {
-        var principal = httpContextAccessor.HttpContext?.User;
-        if (principal?.Identity?.IsAuthenticated != true) return null;
-
-        var value = principal.FindFirstValue(ClaimTypes.NameIdentifier);
-        return string.IsNullOrEmpty(value) ? null : Guid.Parse(value);
     }
 }

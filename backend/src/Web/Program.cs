@@ -18,18 +18,21 @@ var app = builder.Build();
 
 await app.InitialiseDatabaseAsync();
 
-if (!app.Environment.IsDevelopment()) app.UseHsts();
+app.UseForwardedHeaders();
 
-app.UseCors(static builder => builder
-    .AllowAnyMethod()
-    .AllowAnyHeader()
-    .AllowAnyOrigin());
+if (!app.Environment.IsDevelopment()) app.UseHsts();
 
 app.MapOpenApi();
 app.MapScalarApiReference();
 app.MapHealthChecks("/health");
 
 app.UseExceptionHandler(options => { });
+
+// Фронт и API на одном origin (traefik / vite proxy) — CORS не нужен и не включается.
+app.UseMiddleware<CsrfHeaderMiddleware>();
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapEndpoints();
 
