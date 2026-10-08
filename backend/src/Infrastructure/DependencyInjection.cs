@@ -31,6 +31,14 @@ public static class DependencyInjection
 
         builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         builder.Services.AddScoped<ITodoItemRepository, TodoItemRepository>();
+        builder.Services.AddScoped<IDataEntryRepository, DataEntryRepository>();
+        builder.Services.AddScoped<IGroupRepository, GroupRepository>();
+        builder.Services.AddScoped<ILessonRepository, LessonRepository>();
+        builder.Services.AddScoped<ILessonGradebookRepository, LessonGradebookRepository>();
+        builder.Services.AddScoped<IUserRepository, UserRepository>();
+        builder.Services.AddScoped<IParentRepository, ParentRepository>();
+        builder.Services.AddScoped<ITeacherRepository, TeacherRepository>();
+        builder.Services.AddScoped<IStudentRepository, StudentRepository>();
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         builder.Services.AddScoped<ApplicationDbContextInitialiser>();
