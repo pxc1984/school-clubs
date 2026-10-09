@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using FluentValidation;
 using SchoolClubs.Application.Services.Account;
 using SchoolClubs.Application.Services.Auth;
@@ -39,6 +40,32 @@ public class AcceptConsentRequestValidator : AbstractValidator<AcceptConsentRequ
         RuleFor(r => r.Accept)
             .Equal(true)
             .WithMessage("Нужно согласие на обработку персональных данных.");
+    }
+}
+
+public class UpdateAccountRequestValidator : AbstractValidator<UpdateAccountRequest>
+{
+    public UpdateAccountRequestValidator()
+    {
+        RuleFor(r => r.FirstName).NameRules().NotEmpty();
+        RuleFor(r => r.LastName).NameRules().NotEmpty();
+        RuleFor(r => r.MiddleName).NameRules();
+        RuleFor(r => r.Phone)
+            .MaximumLength(32)
+            .Must(phone => string.IsNullOrWhiteSpace(phone) || new PhoneAttribute().IsValid(phone.Trim()))
+            .WithMessage("Некорректный номер телефона.");
+    }
+}
+
+public class ChangePasswordRequestValidator : AbstractValidator<ChangePasswordRequest>
+{
+    public ChangePasswordRequestValidator()
+    {
+        RuleFor(r => r.CurrentPassword).MaximumLength(128);
+        RuleFor(r => r.NewPassword)
+            .NotEmpty()
+            .MinimumLength(RegisterRequestValidator.PasswordMinLength)
+            .MaximumLength(128);
     }
 }
 
