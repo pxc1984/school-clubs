@@ -65,7 +65,7 @@ Dev и prod могут жить на одном сервере в разных `
 передавать `Host`, `X-Forwarded-For` и `X-Forwarded-Proto`. Схема БД мигрирует при старте бэкенда.
 
 Dev: `pxc1984/school-clubs` → окружение `deploy-dev`, `school218clubs@109.120.137.209:/home/school218clubs/school-clubs-dev`,
-порт 52140.
+порт 52140 (https://sc.iamamaev.ru), PostgreSQL для диагностики — `109.120.137.209:59977` (`DB_BIND`/`DB_PORT` в `ENV`).
 
 ## Добавить фичу
 
