@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using SchoolClubs.Application.Common.Options;
 using SchoolClubs.Application.Services.Admin;
@@ -91,7 +92,7 @@ public class TeacherEndpointTests : TestBase
 
         first.Tasks.Count.ShouldBe(1);
         first.Topic.ShouldBe("Датчики");
-        second.Tasks.Select(t => t.Order).ShouldBe([1L, 2L, 3L, 4L]);
+        second.Tasks.Select(t => t.Number).ShouldBe(["1", "2", "3", "4"]);
         third.Tasks.Count.ShouldBe(4);
     }
 
@@ -168,20 +169,42 @@ public class TeacherEndpointTests : TestBase
             new GradebookCellChange(_alice.Id, lesson.Tasks[1].Id, GradebookEntryTaskStatus.Solved, null));
 
         var added = await (await _teacher.PostAsJsonAsync($"{Teacher}/lessons/{lesson.Id}/tasks",
-            new TaskTitleRequest("Бонус"))).Content.ReadFromJsonAsync<LessonDto>();
+            new TaskRequest(null, "Бонус"))).Content.ReadFromJsonAsync<LessonDto>();
         added!.Tasks.Select(t => t.Title).ShouldBe([null, null, "Бонус"]);
         added.Tasks[0].EntryCount.ShouldBe(1);
 
         var renamed = await (await _teacher.PutAsJsonAsync($"{Teacher}/lessons/{lesson.Id}/tasks/{lesson.Tasks[0].Id}",
-            new TaskTitleRequest("Разминка"))).Content.ReadFromJsonAsync<LessonDto>();
+            new TaskRequest(null, "Разминка"))).Content.ReadFromJsonAsync<LessonDto>();
         renamed!.Tasks[0].Title.ShouldBe("Разминка");
 
         var afterDelete = await (await _teacher.DeleteAsync($"{Teacher}/lessons/{lesson.Id}/tasks/{lesson.Tasks[0].Id}"))
             .Content.ReadFromJsonAsync<LessonDto>();
-        afterDelete!.Tasks.Select(t => (t.Order, t.Title)).ShouldBe([(1L, null), (2L, "Бонус")]);
+        afterDelete!.Tasks.Select(t => (t.Number, t.Title)).ShouldBe([("2", null), ("3", "Бонус")]);
 
         var gradebook = await _teacher.GetFromJsonAsync<GradebookDto>($"{Teacher}/lessons/{lesson.Id}/gradebook");
         gradebook!.Entries.ShouldHaveSingleItem().TaskId.ShouldBe(lesson.Tasks[1].Id);
+    }
+
+    [Test]
+    public async Task Tasks_Renumber_OrdersByNumber_DuplicateIsValidationError()
+    {
+        var lesson = await CreateLessonAsync(Today(), taskCount: 2);
+        var url = $"{Teacher}/lessons/{lesson.Id}/tasks";
+
+        var added = await (await _teacher.PostAsJsonAsync(url, new TaskRequest("1.1", "Подзадача")))
+            .Content.ReadFromJsonAsync<LessonDto>();
+        added!.Tasks.Select(t => t.Number).ShouldBe(["1", "1.1", "2"]);
+
+        var renumbered = await (await _teacher.PutAsJsonAsync($"{url}/{lesson.Tasks[1].Id}",
+            new TaskRequest(" 1.2 ", null))).Content.ReadFromJsonAsync<LessonDto>();
+        renumbered!.Tasks.Select(t => t.Number).ShouldBe(["1", "1.1", "1.2"]);
+
+        var duplicate = await _teacher.PutAsJsonAsync($"{url}/{lesson.Tasks[0].Id}", new TaskRequest("1.1", null));
+        duplicate.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await duplicate.Content.ReadFromJsonAsync<HttpValidationProblemDetails>())!.Errors
+            .ShouldContainKey(nameof(TaskRequest.Number));
+        (await _teacher.PostAsJsonAsync(url, new TaskRequest("1 1", null))).StatusCode
+            .ShouldBe(HttpStatusCode.BadRequest);
     }
 
     [Test]

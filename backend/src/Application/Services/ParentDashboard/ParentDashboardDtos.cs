@@ -78,7 +78,7 @@ public record ChildLessonDto(
 /// <summary>Задача занятия: отметка и замечание ребёнку, «решили 12 из 15» по группе (null — мало посетивших).</summary>
 public record ChildTaskDto(
     Guid TaskId,
-    long Order,
+    string Number,
     string? Title,
     GradebookEntryTaskStatus? Status,
     string? Comment,

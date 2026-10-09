@@ -116,7 +116,7 @@ public class GradebookImportEndpointTests : TestBase
         preview.ForeignFile.ShouldBeFalse();
         preview.LessonMismatch.ShouldBeNull();
         preview.Changes.Select(c => (c.StudentId, c.TaskNumber, c.Kind)).ShouldBe(
-            [(_alice.Id, 1L, ImportChangeKind.Changed), (_alice.Id, 2L, ImportChangeKind.New)]);
+            [(_alice.Id, "1", ImportChangeKind.Changed), (_alice.Id, "2", ImportChangeKind.New)]);
         preview.CellErrors.ShouldBe(["C4: «x»"]);
         preview.MissingStudents.ShouldBeEmpty();
 
@@ -182,7 +182,7 @@ public class GradebookImportEndpointTests : TestBase
 
         var preview = await PreviewAsync(file);
         preview.LessonMismatch.ShouldBeNull();
-        preview.MissingTaskNumbers.ShouldBe([3L, 4L]);
+        preview.MissingTaskNumbers.ShouldBe(["3", "4"]);
 
         await ApplyAsync(preview.UploadId, new ApplyImportRequest(false, true, false, null));
 

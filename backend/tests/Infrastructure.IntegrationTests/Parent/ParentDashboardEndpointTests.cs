@@ -168,8 +168,8 @@ public class ParentDashboardEndpointTests : TestBase
         third.Score!.Value.ShouldBe(0.875, 1e-9);
         third.GroupAverageSolved.ShouldBe(0.4);
         third.Tasks.ShouldBe([
-            new ChildTaskDto(third.Tasks[0].TaskId, 1, "Разминка", Solved, null, 1, 5),
-            new ChildTaskDto(third.Tasks[1].TaskId, 2, null, SolvedWithRemarks, "Не обработан пустой ввод", 1, 5),
+            new ChildTaskDto(third.Tasks[0].TaskId, "1", "Разминка", Solved, null, 1, 5),
+            new ChildTaskDto(third.Tasks[1].TaskId, "2", null, SolvedWithRemarks, "Не обработан пустой ввод", 1, 5),
         ]);
     }
 

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using SchoolClubs.Domain.Entities.Gradebook;
 using Task = SchoolClubs.Domain.Entities.Gradebook.Task;
 
 namespace SchoolClubs.Infrastructure.Data.Configurations;
@@ -17,8 +18,12 @@ public class TaskConfiguration : IEntityTypeConfiguration<Task>
             .HasColumnName("id")
             .ValueGeneratedNever();
 
-        // Без уникального индекса (lesson_id, order): Lesson.RemoveTask сдвигает номера,
-        // и промежуточные UPDATE нарушали бы неотложенное ограничение.
+        // Уникальность номера (без учёта регистра) держит Lesson. Без уникального индекса (lesson_id, order):
+        // Lesson пересчитывает позиции, и промежуточные UPDATE нарушали бы неотложенное ограничение.
+        builder
+            .Property(t => t.Number)
+            .HasColumnName("number")
+            .HasMaxLength(TaskNumber.MaxLength);
         builder
             .Property(t => t.Order)
             .HasColumnName("order");

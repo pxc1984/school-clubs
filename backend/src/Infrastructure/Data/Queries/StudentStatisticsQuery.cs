@@ -54,7 +54,7 @@ public class StudentStatisticsQuery(DbContext dbContext) : IStudentStatisticsQue
             .Select(l => new PublishedLessonRow(l.Id, l.Date, l.Time, l.Topic,
                 l.Tasks
                     .OrderBy(t => t.Order)
-                    .Select(t => new LessonTaskRow(t.Id, t.Order, t.Title))
+                    .Select(t => new LessonTaskRow(t.Id, t.Number, t.Title))
                     .ToList()))
             .ToListAsync(cancellationToken);
 

@@ -54,7 +54,7 @@
         attendance = [],
         saveState = $bindable("saved"),
         onAddTask,
-        onRenameTask,
+        onEditTask,
         onDeleteTask,
     }: {
         lessonId: string;
@@ -64,7 +64,7 @@
         attendance?: GradebookAttendanceDto[];
         saveState?: SaveState;
         onAddTask?: () => void;
-        onRenameTask?: (task: TaskDto) => void;
+        onEditTask?: (task: TaskDto) => void;
         onDeleteTask?: (task: TaskDto, marks: number) => void;
     } = $props();
 
@@ -412,7 +412,7 @@
             {#if focused}
                 <span class="font-medium">{shortName(focused.student)}</span>
                 <span class="text-muted-foreground">
-                    · задача {focused.task.order}{focused.task.title
+                    · задача {focused.task.number}{focused.task.title
                         ? ` «${focused.task.title}»`
                         : ""}
                 </span>
@@ -495,7 +495,7 @@
                                             class="flex w-full min-w-11 flex-col items-center rounded px-1 py-0.5 hover:bg-muted"
                                             title={task.title ?? undefined}
                                         >
-                                            <span>{task.order}</span>
+                                            <span>{task.number}</span>
                                             {#if task.title}
                                                 <span
                                                     class="max-w-20 truncate text-xs font-normal text-muted-foreground"
@@ -508,13 +508,13 @@
                                 </DropdownMenu.Trigger>
                                 <DropdownMenu.Content align="center">
                                     <DropdownMenu.Label>
-                                        Задача {task.order}
+                                        Задача {task.number}
                                     </DropdownMenu.Label>
                                     <DropdownMenu.Item
-                                        onSelect={() => onRenameTask?.(task)}
+                                        onSelect={() => onEditTask?.(task)}
                                     >
                                         <PencilIcon />
-                                        Название
+                                        Номер и название
                                     </DropdownMenu.Item>
                                     <DropdownMenu.Item
                                         variant="destructive"
@@ -679,7 +679,7 @@
                                     )}
                                     aria-label="{shortName(
                                         student,
-                                    )}, задача {task.order}: {grade?.label ??
+                                    )}, задача {task.number}: {grade?.label ??
                                         'нет отметки'}{cell?.comment
                                         ? `, комментарий: ${cell.comment}`
                                         : ''}"

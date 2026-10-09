@@ -99,7 +99,9 @@ export type UpdateLessonRequest = {
     topic: string | null;
 };
 
-export type TaskTitleRequest = {
+export type TaskRequest = {
+    /** null — при добавлении следующий по порядку, при изменении — прежний */
+    number: string | null;
     title: string | null;
 };
 
@@ -172,7 +174,7 @@ export type ImportChangeDto = {
     studentId: Guid;
     /** null — задачи с таким номером ещё нет (создастся при createMissingTasks) */
     taskId: Guid | null;
-    taskNumber: number;
+    taskNumber: string;
     kind: ImportChangeKind;
     status: GradebookEntryTaskStatus;
     previousStatus: GradebookEntryTaskStatus | null;
@@ -197,7 +199,7 @@ export type ImportPreviewDto = {
     unrecognizedRows: UnrecognizedRowDto[];
     missingStudents: StudentDto[];
     /** Номера задач из файла, которых нет в занятии */
-    missingTaskNumbers: number[];
+    missingTaskNumbers: string[];
     /** «D7: «решил почти»» */
     cellErrors: string[];
     warnings: string[];
@@ -304,19 +306,19 @@ export async function addTask(
 ): Promise<LessonDto> {
     const response = await api.post<LessonDto>(
         `/teacher/lessons/${lessonId}/tasks`,
-        { title } satisfies TaskTitleRequest,
+        { number: null, title } satisfies TaskRequest,
     );
     return response.data;
 }
 
-export async function renameTask(
+export async function updateTask(
     lessonId: Guid,
     taskId: Guid,
-    title: string | null,
+    request: TaskRequest,
 ): Promise<LessonDto> {
     const response = await api.put<LessonDto>(
         `/teacher/lessons/${lessonId}/tasks/${taskId}`,
-        { title } satisfies TaskTitleRequest,
+        request,
     );
     return response.data;
 }

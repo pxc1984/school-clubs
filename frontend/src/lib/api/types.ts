@@ -57,7 +57,8 @@ export type UserRefDto = {
 
 export type TaskDto = {
     id: Guid;
-    order: number;
+    /** Номер в свободной форме: «1», «1.1», «2а»; задачи приходят в порядке номеров */
+    number: string;
     title: string | null;
     /** Сколько отметок удалится вместе с задачей */
     entryCount: number;

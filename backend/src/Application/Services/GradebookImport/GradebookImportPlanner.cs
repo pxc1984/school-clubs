@@ -13,13 +13,13 @@ public record ImportPlan(
     IReadOnlyList<ImportChangeDto> Changes,
     IReadOnlyList<UnrecognizedRowDto> UnrecognizedRows,
     IReadOnlyList<StudentDto> MissingStudents,
-    IReadOnlyList<long> MissingTaskNumbers,
+    IReadOnlyList<string> MissingTaskNumbers,
     IReadOnlyList<string> CellErrors,
     IReadOnlyList<string> Warnings,
     IReadOnlyList<string> Errors);
 
 /// <summary>
-/// Чистая логика импорта (без файлов и БД): задачи — по скрытому id, иначе по номеру «Задача N»;
+/// Чистая логика импорта (без файлов и БД): задачи — по скрытому id, иначе по номеру «Задача N» (без учёта регистра);
 /// ученики — по скрытому id, иначе по нормализованному ФИО среди учеников группы.
 /// Пустая ячейка — «не изменять»: импорт только добавляет и перезаписывает.
 /// </summary>
@@ -42,14 +42,13 @@ public static class GradebookImportPlanner
 
         // Колонки → задачи.
         var tasksById = lesson.Tasks.ToDictionary(t => t.Id);
-        var tasksByOrder = lesson.Tasks.ToDictionary(t => t.Order);
-        var columns = new Dictionary<string, (Domain.Entities.Gradebook.Task? Task, long Number)>();
-        var missingNumbers = new SortedSet<long>();
+        var columns = new Dictionary<string, (Domain.Entities.Gradebook.Task? Task, string Number)>();
+        var missingNumbers = new List<string>();
         foreach (var column in file.Columns)
         {
             if (column.TaskId is { } taskId && tasksById.TryGetValue(taskId, out var byId))
             {
-                columns[column.Letter] = (byId, byId.Order);
+                columns[column.Letter] = (byId, byId.Number);
                 continue;
             }
 
@@ -65,14 +64,15 @@ public static class GradebookImportPlanner
                 continue;
             }
 
-            if (tasksByOrder.TryGetValue(number, out var byOrder))
+            if (lesson.FindTaskByNumber(number) is { } byNumber)
             {
-                columns[column.Letter] = (byOrder, number);
+                columns[column.Letter] = (byNumber, byNumber.Number);
             }
             else
             {
                 columns[column.Letter] = (null, number);
-                missingNumbers.Add(number);
+                if (!missingNumbers.Any(n => TaskNumber.AreSame(n, number)))
+                    missingNumbers.Add(number);
             }
         }
 
@@ -141,7 +141,7 @@ public static class GradebookImportPlanner
 
         var missingStudents = group.Students.Where(s => !rowsByStudent.ContainsKey(s.Id)).ToDtos();
         return new ImportPlan(foreign, sameLesson ? null : file.Meta?.LessonId, mismatch, changes, unrecognized,
-            missingStudents, missingNumbers.ToList(), cellErrors, warnings, errors);
+            missingStudents, missingNumbers.Order(TaskNumber.Comparer).ToList(), cellErrors, warnings, errors);
     }
 
     private static (Student? Student, string? Reason, IReadOnlyList<Student> Candidates) Resolve(ParsedRow row,

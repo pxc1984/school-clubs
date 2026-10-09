@@ -17,7 +17,7 @@ public record ImportChangeDto(
     int Row,
     Guid StudentId,
     Guid? TaskId,
-    long TaskNumber,
+    string TaskNumber,
     ImportChangeKind Kind,
     GradebookEntryTaskStatus Status,
     GradebookEntryTaskStatus? PreviousStatus);
@@ -28,7 +28,7 @@ public record UnrecognizedRowDto(int Row, string Name, string Reason, IReadOnlyL
 /// <param name="UploadId">Идентификатор загрузки для <c>…/import/{uploadId}/apply</c>.</param>
 /// <param name="ForeignFile">Нет листа <c>_meta</c>: сопоставление только по тексту.</param>
 /// <param name="LessonMismatch">Файл от другого занятия («файл от занятия 12.09»); применение — только с подтверждением.</param>
-/// <param name="MissingTaskNumbers">Номера задач из файла, которых нет в занятии («создать задачи 4–5»).</param>
+/// <param name="MissingTaskNumbers">Номера задач из файла, которых нет в занятии («создать задачи 4, 4.1»).</param>
 /// <param name="MissingStudents">Ученики группы, которых нет в файле: их отметки не трогаются.</param>
 /// <param name="CellErrors">Нераспознанные отметки: <c>D7: «решил почти»</c>.</param>
 /// <param name="Errors">Блокирующие ошибки (дубль ученика) — применение невозможно.</param>
@@ -40,7 +40,7 @@ public record ImportPreviewDto(
     IReadOnlyList<ImportChangeDto> Changes,
     IReadOnlyList<UnrecognizedRowDto> UnrecognizedRows,
     IReadOnlyList<StudentDto> MissingStudents,
-    IReadOnlyList<long> MissingTaskNumbers,
+    IReadOnlyList<string> MissingTaskNumbers,
     IReadOnlyList<string> CellErrors,
     IReadOnlyList<string> Warnings,
     IReadOnlyList<string> Errors);

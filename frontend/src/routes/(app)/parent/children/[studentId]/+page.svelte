@@ -240,7 +240,7 @@
                                                 />
                                                 <div class="min-w-0 flex-1">
                                                     <div>
-                                                        Задача {task.order}{task.title
+                                                        Задача {task.number}{task.title
                                                             ? `: ${task.title}`
                                                             : ""}
                                                     </div>

@@ -1,7 +1,8 @@
 namespace SchoolClubs.Application.Services.Lessons;
 
 /// <param name="EntryCount">Сколько отметок удалится вместе с задачей — UI переспрашивает с этим числом.</param>
-public record TaskDto(Guid Id, long Order, string? Title, int EntryCount);
+/// <param name="Number">Номер в свободной форме («1.1», «2а»); задачи приходят в порядке номеров.</param>
+public record TaskDto(Guid Id, string Number, string? Title, int EntryCount);
 
 public record LessonDto(
     Guid Id,
@@ -18,4 +19,5 @@ public record CreateLessonRequest(DateOnly Date, TimeOnly? Time, string? Topic, 
 
 public record UpdateLessonRequest(DateOnly Date, TimeOnly? Time, string? Topic);
 
-public record TaskTitleRequest(string? Title);
+/// <param name="Number">Новый номер; <c>null</c> — при добавлении следующий по порядку, при изменении — прежний.</param>
+public record TaskRequest(string? Number, string? Title);

@@ -22,10 +22,13 @@ public class UpdateLessonRequestValidator : AbstractValidator<UpdateLessonReques
     }
 }
 
-public class TaskTitleRequestValidator : AbstractValidator<TaskTitleRequest>
+public class TaskRequestValidator : AbstractValidator<TaskRequest>
 {
-    public TaskTitleRequestValidator()
+    public TaskRequestValidator()
     {
+        RuleFor(r => r.Number)
+            .Must(n => n == null || TaskNumber.IsValid(n.Trim()))
+            .WithMessage($"Номер задачи — до {TaskNumber.MaxLength} символов, без пробелов и двоеточий.");
         RuleFor(r => r.Title).MaximumLength(Domain.Entities.Gradebook.Task.TitleMaxLength);
     }
 }

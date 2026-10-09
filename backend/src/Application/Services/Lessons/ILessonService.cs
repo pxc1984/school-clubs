@@ -8,11 +8,11 @@ public interface ILessonService
     /// <summary>Только занятие без отметок; иначе — через админа.</summary>
     Task DeleteAsync(Guid lessonId, CancellationToken cancellationToken = default);
 
-    Task<LessonDto> AddTaskAsync(Guid lessonId, TaskTitleRequest request, CancellationToken cancellationToken = default);
+    Task<LessonDto> AddTaskAsync(Guid lessonId, TaskRequest request, CancellationToken cancellationToken = default);
 
-    Task<LessonDto> RenameTaskAsync(Guid lessonId,
+    Task<LessonDto> UpdateTaskAsync(Guid lessonId,
         Guid taskId,
-        TaskTitleRequest request,
+        TaskRequest request,
         CancellationToken cancellationToken = default);
 
     /// <summary>Удаляет задачу вместе с её отметками и сдвигает номера следующих.</summary>

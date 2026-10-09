@@ -69,7 +69,7 @@ export type ChildSummaryDto = {
 
 export type ChildTaskDto = {
     taskId: Guid;
-    order: number;
+    number: string;
     title: string | null;
     status: GradebookEntryTaskStatus | null;
     comment: string | null;

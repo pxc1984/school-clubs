@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using Shouldly;
+using SchoolClubs.Domain.Common.Exceptions;
 using SchoolClubs.Domain.Entities.Gradebook;
 using Task = SchoolClubs.Domain.Entities.Gradebook.Task;
 
@@ -25,20 +26,61 @@ public class LessonTests
     }
 
     [Test]
-    public void AddTask_AssignsSequentialOrder()
+    public void AddTask_AssignsNextNumber()
     {
         var lesson = new Lesson(new Group("Шахматы"), Date, null);
 
         var first = lesson.AddTask();
         var second = lesson.AddTask();
 
-        first.Order.ShouldBe(1);
+        first.Number.ShouldBe("1");
+        second.Number.ShouldBe("2");
         second.Order.ShouldBe(2);
         second.LessonId.ShouldBe(lesson.Id);
     }
 
     [Test]
-    public void RemoveTask_ShiftsFollowingOrders()
+    public void AddTask_AfterSubtasks_TakesNextWholeNumber()
+    {
+        var lesson = new Lesson(new Group("Шахматы"), Date, null);
+        lesson.AddTask(number: "1.1");
+        lesson.AddTask(number: "1.2");
+
+        lesson.AddTask().Number.ShouldBe("2");
+    }
+
+    [Test]
+    public void AddTask_DuplicateOrInvalidNumber_Throws()
+    {
+        var lesson = new Lesson(new Group("Шахматы"), Date, null);
+        lesson.AddTask(number: "2а");
+
+        Should.Throw<DuplicateTaskNumberException>(() => lesson.AddTask(number: " 2А "));
+        Should.Throw<ArgumentException>(() => lesson.AddTask(number: "1 2"));
+        Should.Throw<ArgumentException>(() => lesson.AddTask(number: "1:2"));
+        Should.Throw<ArgumentException>(() => lesson.AddTask(number: new string('1', TaskNumber.MaxLength + 1)));
+        lesson.Tasks.Count.ShouldBe(1);
+    }
+
+    [Test]
+    public void RenumberTask_ReordersByNaturalNumberOrder()
+    {
+        var lesson = new Lesson(new Group("Шахматы"), Date, null);
+        var first = lesson.AddTask();
+        var second = lesson.AddTask();
+        var third = lesson.AddTask();
+
+        lesson.RenumberTask(third, "1.1");
+        lesson.RenumberTask(second, "10");
+
+        lesson.Tasks.OrderBy(t => t.Order).Select(t => t.Number).ShouldBe(["1", "1.1", "10"]);
+        (first.Order, third.Order, second.Order).ShouldBe((1, 2, 3));
+        Should.Throw<DuplicateTaskNumberException>(() => lesson.RenumberTask(second, "1"));
+        lesson.RenumberTask(second, "10");
+    }
+
+    [Test]
+    public void RemoveTask_KeepsNumbers_CompactsOrders()
     {
         var lesson = new Lesson(new Group("Шахматы"), Date, null);
         var first = lesson.AddTask();
@@ -48,6 +90,7 @@ public class LessonTests
         lesson.RemoveTask(second).ShouldBeTrue();
 
         lesson.Tasks.ShouldBe([first, third]);
+        third.Number.ShouldBe("3");
         third.Order.ShouldBe(2);
     }
 

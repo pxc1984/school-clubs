@@ -18,7 +18,7 @@ internal static class SpreadsheetFixtures
     public static GradebookTemplate Template()
     {
         return new GradebookTemplate(Group, "Робототехника", Lesson, new DateOnly(2026, 10, 1), "Датчики",
-            [new TemplateTask(Task1, 1, null), new TemplateTask(Task2, 2, "Рекурсия")],
+            [new TemplateTask(Task1, "1", null), new TemplateTask(Task2, "2", "Рекурсия")],
             [new TemplateStudent(Alice, "Андреева Алиса"), new TemplateStudent(Bob, "Борисов Борис")],
             [
                 new TemplateEntry(Alice, Task1, GradebookEntryTaskStatus.Solved),
@@ -69,8 +69,8 @@ public class SpreadsheetTests
             new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero)));
         parsed.Columns.ShouldBe(
         [
-            new ParsedColumn("C", SpreadsheetFixtures.Task1, 1, "Задача 1"),
-            new ParsedColumn("D", SpreadsheetFixtures.Task2, 2, "Задача 2: Рекурсия"),
+            new ParsedColumn("C", SpreadsheetFixtures.Task1, "1", "Задача 1"),
+            new ParsedColumn("D", SpreadsheetFixtures.Task2, "2", "Задача 2: Рекурсия"),
         ]);
         Summary(parsed).ShouldBe(
         [
@@ -154,6 +154,9 @@ public class SpreadsheetTests
         sheet.Cell("A1").Value = "ФИО";
         sheet.Cell("B1").Value = "Задача 1";
         sheet.Cell("C1").Value = "2";
+        sheet.Cell("D1").Value = "Задача 2.1а: Рекурсия";
+        sheet.Cell("E1").Value = "3. Циклы";
+        sheet.Cell("F1").Value = "Итого";
         sheet.Cell("A2").Value = "Алиса Андреева";
         sheet.Cell("B2").Value = "+";
         sheet.Cell("A4").Value = "Борисов Борис";
@@ -164,7 +167,14 @@ public class SpreadsheetTests
         var parsed = Parse(output.ToArray());
 
         parsed.Meta.ShouldBeNull();
-        parsed.Columns.ShouldBe([new ParsedColumn("B", null, 1, "Задача 1"), new ParsedColumn("C", null, 2, "2")]);
+        parsed.Columns.ShouldBe(
+        [
+            new ParsedColumn("B", null, "1", "Задача 1"),
+            new ParsedColumn("C", null, "2", "2"),
+            new ParsedColumn("D", null, "2.1а", "Задача 2.1а: Рекурсия"),
+            new ParsedColumn("E", null, "3", "3. Циклы"),
+            new ParsedColumn("F", null, null, "Итого"),
+        ]);
         Summary(parsed).ShouldBe([((Guid?) null, "Алиса Андреева", "B2=+"), (null, "Борисов Борис", "C4=нет")]);
     }
 

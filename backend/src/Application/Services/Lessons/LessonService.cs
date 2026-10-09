@@ -1,4 +1,5 @@
 using FluentValidation;
+using FluentValidation.Results;
 using SchoolClubs.Application.Common;
 using SchoolClubs.Application.Common.Exceptions;
 using SchoolClubs.Domain.Abstractions;
@@ -14,7 +15,7 @@ public class LessonService(
     ILessonGradebookRepository gradebooks,
     IUnitOfWork unitOfWork,
     IValidator<UpdateLessonRequest> updateValidator,
-    IValidator<TaskTitleRequest> taskTitleValidator) : ILessonService
+    IValidator<TaskRequest> taskValidator) : ILessonService
 {
     /// <summary>Как у XLSX-трафарета: больше задач в одном занятии не бывает.</summary>
     public const int MaxTasks = 50;
@@ -51,29 +52,37 @@ public class LessonService(
     }
 
     public async Task<LessonDto> AddTaskAsync(Guid lessonId,
-        TaskTitleRequest request,
+        TaskRequest request,
         CancellationToken cancellationToken = default)
     {
-        await ValidateAsync(taskTitleValidator, request, cancellationToken);
+        await ValidateAsync(taskValidator, request, cancellationToken);
 
         var (lesson, group) = await access.GetLessonAsync(lessonId, cancellationToken);
         if (lesson.Tasks.Count >= MaxTasks)
             throw new ArgumentException($"lesson can't have more than {MaxTasks} tasks");
 
-        lesson.AddTask(request.Title);
+        EnsureNumberIsFree(lesson, request.Number, null);
+        lesson.AddTask(request.Title, request.Number);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return ToDto(lesson, group, await gradebooks.GetByLessonIdAsync(lessonId, cancellationToken));
     }
 
-    public async Task<LessonDto> RenameTaskAsync(Guid lessonId,
+    public async Task<LessonDto> UpdateTaskAsync(Guid lessonId,
         Guid taskId,
-        TaskTitleRequest request,
+        TaskRequest request,
         CancellationToken cancellationToken = default)
     {
-        await ValidateAsync(taskTitleValidator, request, cancellationToken);
+        await ValidateAsync(taskValidator, request, cancellationToken);
 
         var (lesson, group) = await access.GetLessonAsync(lessonId, cancellationToken);
-        FindTask(lesson, taskId).Rename(request.Title);
+        var task = FindTask(lesson, taskId);
+        if (request.Number is not null)
+        {
+            EnsureNumberIsFree(lesson, request.Number, task);
+            lesson.RenumberTask(task, request.Number);
+        }
+
+        task.Rename(request.Title);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return ToDto(lesson, group, await gradebooks.GetByLessonIdAsync(lessonId, cancellationToken));
     }
@@ -97,7 +106,7 @@ public class LessonService(
     {
         var tasks = lesson.Tasks
             .OrderBy(t => t.Order)
-            .Select(t => new TaskDto(t.Id, t.Order, t.Title,
+            .Select(t => new TaskDto(t.Id, t.Number, t.Title,
                 gradebook?.GradebookEntries.Count(e => e.TaskId == t.Id) ?? 0))
             .ToList();
         return new LessonDto(lesson.Id, group.Id, group.Title, lesson.Date, lesson.Time, lesson.Topic, tasks,
@@ -109,6 +118,14 @@ public class LessonService(
         var task = lesson.Tasks.FirstOrDefault(t => t.Id == taskId);
         Guard.Against.NotFound(taskId, task);
         return task;
+    }
+
+    private static void EnsureNumberIsFree(Lesson lesson, string? number, Domain.Entities.Gradebook.Task? except)
+    {
+        if (number is not null && lesson.FindTaskByNumber(number) is { } other && other != except)
+            throw new ValidationException([
+                new ValidationFailure(nameof(TaskRequest.Number), $"Задача с номером {other.Number} уже есть."),
+            ]);
     }
 
     private static async Task ValidateAsync<T>(IValidator<T> validator, T request, CancellationToken cancellationToken)

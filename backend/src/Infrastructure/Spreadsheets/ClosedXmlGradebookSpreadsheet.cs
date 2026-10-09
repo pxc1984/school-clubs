@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using ClosedXML.Excel;
 using SchoolClubs.Application.Services.GradebookImport;
+using SchoolClubs.Domain.Entities.Gradebook;
 
 namespace SchoolClubs.Infrastructure.Spreadsheets;
 
@@ -48,8 +49,8 @@ public partial class ClosedXmlGradebookSpreadsheet : IGradebookSpreadsheet
             var task = template.Tasks[i];
             var column = FirstTaskColumn + i;
             sheet.Cell(HeaderRow, column).Value = task.Title is null
-                ? $"Задача {task.Order}"
-                : $"Задача {task.Order}: {task.Title}";
+                ? $"Задача {task.Number}"
+                : $"Задача {task.Number}: {task.Title}";
             if (task.Id is { } taskId)
                 sheet.Cell(IdsRow, column).Value = taskId.ToString();
         }
@@ -155,9 +156,12 @@ public partial class ClosedXmlGradebookSpreadsheet : IGradebookSpreadsheet
             if (headerText.Length == 0 && taskId is null)
                 continue;
 
-            var number = TaskNumber().Match(headerText) is { Success: true } match
-                ? int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture)
-                : (int?) null;
+            // «2. Рекурсия», «2) …» — точка или скобка после номера к нему не относятся.
+            var number = TaskNumberPattern().Match(headerText) is { Success: true } match
+                ? match.Groups["number"].Value.TrimEnd('.', ',', ')')
+                : null;
+            if (!TaskNumber.IsValid(number))
+                number = null;
             columns.Add(new ParsedColumn(sheet.Column(column).ColumnLetter(), taskId, number, headerText));
         }
 
@@ -268,7 +272,11 @@ public partial class ClosedXmlGradebookSpreadsheet : IGradebookSpreadsheet
         return cell.GetFormattedString().Trim();
     }
 
-    /// <summary>«Задача 2», «Задача 2: Рекурсия», «№2», «2».</summary>
-    [GeneratedRegex(@"^\s*(?:задача|task|№|#)?\s*(\d{1,3})(?!\d)", RegexOptions.IgnoreCase)]
-    private static partial Regex TaskNumber();
+    /// <summary>
+    /// «Задача 2», «Задача 1.1: Рекурсия», «№2а», «2», «2. Рекурсия»: после слова «Задача» номер — любой
+    /// до пробела или двоеточия, без него — начинается с цифры.
+    /// </summary>
+    [GeneratedRegex(@"^\s*(?:(?:задача|task|№|#)\s*(?<number>[^\s:]+)|(?<number>\d[^\s:]*))",
+        RegexOptions.IgnoreCase)]
+    private static partial Regex TaskNumberPattern();
 }

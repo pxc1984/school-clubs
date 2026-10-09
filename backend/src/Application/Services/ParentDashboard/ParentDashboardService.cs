@@ -87,11 +87,10 @@ public class ParentDashboardService(
             {
                 var result = l.ResultOf(studentId);
                 var tasks = l.Lesson.Tasks
-                    .OrderBy(t => t.Order)
                     .Select(t =>
                     {
                         var solvedBy = l.TaskSolvedBy(t.Id);
-                        return new ChildTaskDto(t.Id, t.Order, t.Title,
+                        return new ChildTaskDto(t.Id, t.Number, t.Title,
                             statuses.TryGetValue(t.Id, out var status) ? status : null,
                             comments.GetValueOrDefault(t.Id), solvedBy?.Solved, solvedBy?.Attended);
                     })

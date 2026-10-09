@@ -15,7 +15,7 @@ public record GradebookTemplate(
     DateTimeOffset GeneratedAt);
 
 /// <param name="Id"><c>null</c> в чистом трафарете группы: задачи ещё не созданы.</param>
-public record TemplateTask(Guid? Id, long Order, string? Title);
+public record TemplateTask(Guid? Id, string Number, string? Title);
 
 public record TemplateStudent(Guid Id, string Name);
 
@@ -28,7 +28,7 @@ public record ParsedGradebook(ParsedMeta? Meta, IReadOnlyList<ParsedColumn> Colu
 public record ParsedMeta(int FormatVersion, Guid? LessonId, Guid? GroupId, DateTimeOffset? GeneratedAt);
 
 /// <param name="Number">Номер из заголовка «Задача N», если он есть.</param>
-public record ParsedColumn(string Letter, Guid? TaskId, int? Number, string Header);
+public record ParsedColumn(string Letter, Guid? TaskId, string? Number, string Header);
 
 /// <param name="Row">Номер строки на листе (с 1).</param>
 public record ParsedRow(int Row, Guid? StudentId, string Name, IReadOnlyList<ParsedCell> Cells);

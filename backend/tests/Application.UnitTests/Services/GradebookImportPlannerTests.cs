@@ -39,7 +39,7 @@ public class GradebookImportPlannerTests
 
     private ParsedColumn[] OwnColumns()
     {
-        return [new ParsedColumn("C", _task1.Id, 1, "Задача 1"), new ParsedColumn("D", _task2.Id, 2, "Задача 2")];
+        return [new ParsedColumn("C", _task1.Id, "1", "Задача 1"), new ParsedColumn("D", _task2.Id, "2", "Задача 2")];
     }
 
     private static ParsedRow Row(int row, Guid? id, string name, params (string Column, string Text)[] cells)
@@ -63,9 +63,9 @@ public class GradebookImportPlannerTests
 
         plan.Changes.Select(c => (c.StudentId, c.TaskNumber, c.Kind)).ShouldBe(
         [
-            (_bob.Id, 1L, ImportChangeKind.Changed),
-            (_alice.Id, 1L, ImportChangeKind.Unchanged),
-            (_alice.Id, 2L, ImportChangeKind.New),
+            (_bob.Id, "1", ImportChangeKind.Changed),
+            (_alice.Id, "1", ImportChangeKind.Unchanged),
+            (_alice.Id, "2", ImportChangeKind.New),
         ]);
         plan.MissingStudents.ShouldHaveSingleItem().Id.ShouldBe(_semyon.Id);
         plan.ForeignFile.ShouldBeFalse();
@@ -76,7 +76,7 @@ public class GradebookImportPlannerTests
     public void ForeignFile_MatchesByNormalizedName_AndTaskNumber()
     {
         var file = new ParsedGradebook(null,
-            [new ParsedColumn("B", null, 1, "Задача 1"), new ParsedColumn("C", null, 5, "Задача 5"), new ParsedColumn("D", null, null, "Итого")],
+            [new ParsedColumn("B", null, "1", "Задача 1"), new ParsedColumn("C", null, "5", "Задача 5"), new ParsedColumn("D", null, null, "Итого")],
             [
                 Row(2, null, "  алиса   АНДРЕЕВА ", ("B", "да"), ("C", "+"), ("D", "2")),
                 Row(3, null, "Елкин Семен Петрович", ("B", "решил почти")),
@@ -87,8 +87,8 @@ public class GradebookImportPlannerTests
 
         plan.ForeignFile.ShouldBeTrue();
         plan.Changes.Select(c => (c.StudentId, c.TaskId, c.TaskNumber)).ShouldBe(
-            [(_alice.Id, _task1.Id, 1L), (_alice.Id, (Guid?) null, 5L)]);
-        plan.MissingTaskNumbers.ShouldBe([5L]);
+            [(_alice.Id, _task1.Id, "1"), (_alice.Id, (Guid?) null, "5")]);
+        plan.MissingTaskNumbers.ShouldBe(["5"]);
         plan.CellErrors.ShouldBe(["B3: «решил почти»"]);
         plan.Warnings.ShouldHaveSingleItem().ShouldContain("Итого");
         plan.UnrecognizedRows.ShouldHaveSingleItem().Row.ShouldBe(4);
@@ -100,7 +100,7 @@ public class GradebookImportPlannerTests
     {
         var twin = new Student("Борис", lastName: "Борисов");
         _group.AddStudent(twin);
-        var file = new ParsedGradebook(null, [new ParsedColumn("B", null, 1, "1")],
+        var file = new ParsedGradebook(null, [new ParsedColumn("B", null, "1", "1")],
             [Row(2, null, "Борис Борисов", ("B", "+"))]);
 
         var plan = GradebookImportPlanner.Plan(file, _lesson, _group, null);
@@ -131,7 +131,7 @@ public class GradebookImportPlannerTests
     public void DeletedTaskColumn_IsIgnoredWithWarning()
     {
         var deleted = Guid.NewGuid();
-        var file = new ParsedGradebook(OwnMeta(), [.. OwnColumns(), new ParsedColumn("E", deleted, 3, "Задача 3")],
+        var file = new ParsedGradebook(OwnMeta(), [.. OwnColumns(), new ParsedColumn("E", deleted, "3", "Задача 3")],
             [Row(3, _alice.Id, "Андреева Алиса", ("E", "+"))]);
 
         var plan = GradebookImportPlanner.Plan(file, _lesson, _group, null);
@@ -146,7 +146,7 @@ public class GradebookImportPlannerTests
     {
         var otherLesson = Guid.NewGuid();
         var file = new ParsedGradebook(new ParsedMeta(1, otherLesson, _group.Id, null),
-            [new ParsedColumn("C", Guid.NewGuid(), 2, "Задача 2")],
+            [new ParsedColumn("C", Guid.NewGuid(), "2", "Задача 2")],
             [Row(3, _alice.Id, "Андреева Алиса", ("C", "-"))]);
 
         var plan = GradebookImportPlanner.Plan(file, _lesson, _group, null);
@@ -160,12 +160,31 @@ public class GradebookImportPlannerTests
     public void GroupTemplateWithoutLesson_IsNotMismatch()
     {
         var file = new ParsedGradebook(new ParsedMeta(1, null, _group.Id, null),
-            [new ParsedColumn("C", null, 1, "Задача 1")],
+            [new ParsedColumn("C", null, "1", "Задача 1")],
             [Row(3, _bob.Id, "Борисов Борис", ("C", "+"))]);
 
         var plan = GradebookImportPlanner.Plan(file, _lesson, _group, null);
 
         plan.LessonMismatch.ShouldBeFalse();
         plan.Changes.ShouldHaveSingleItem().TaskId.ShouldBe(_task1.Id);
+    }
+
+    [Test]
+    public void ForeignFile_FreeFormNumbers_MatchIgnoringCase_MissingSortedNaturally()
+    {
+        _lesson.RenumberTask(_task2, "1.1А");
+        var file = new ParsedGradebook(null,
+            [
+                new ParsedColumn("B", null, "1.1а", "Задача 1.1а"),
+                new ParsedColumn("C", null, "10", "Задача 10"),
+                new ParsedColumn("D", null, "2.1", "Задача 2.1"),
+            ],
+            [Row(2, _alice.Id, "Андреева Алиса", ("B", "+"), ("C", "+"), ("D", "+"))]);
+
+        var plan = GradebookImportPlanner.Plan(file, _lesson, _group, null);
+
+        plan.Changes.Select(c => (c.TaskId, c.TaskNumber)).ShouldBe(
+            [(_task2.Id, "1.1А"), ((Guid?) null, "10"), (null, "2.1")]);
+        plan.MissingTaskNumbers.ShouldBe(["2.1", "10"]);
     }
 }

@@ -19,7 +19,6 @@
         importFileUrl,
         lessonTemplateUrl,
         publishGradebook,
-        renameTask,
         unpublishGradebook,
     } from "$lib/api/teacher";
     import type { TaskDto } from "$lib/api/types";
@@ -30,7 +29,7 @@
     import ImportDialog from "$lib/components/import-dialog.svelte";
     import LessonDialog from "$lib/components/lesson-dialog.svelte";
     import PageHeader from "$lib/components/page-header.svelte";
-    import TextPromptDialog from "$lib/components/text-prompt-dialog.svelte";
+    import TaskDialog from "$lib/components/task-dialog.svelte";
     import { Badge } from "$lib/components/ui/badge";
     import { Button } from "$lib/components/ui/button";
     import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
@@ -104,8 +103,8 @@
 
     // ---------- задачи ----------
 
-    let renaming = $state<TaskDto | null>(null);
-    let renameOpen = $state(false);
+    let editingTask = $state<TaskDto | null>(null);
+    let taskOpen = $state(false);
     let deleting = $state<{ task: TaskDto; marks: number } | null>(null);
     let deleteTaskOpen = $state(false);
 
@@ -116,12 +115,6 @@
         } catch (e) {
             toast.error(errorMessage(e));
         }
-    }
-
-    async function onRename(value: string) {
-        if (!renaming) return;
-        await renameTask(lesson.id, renaming.id, value || null);
-        await invalidateAll();
     }
 
     async function onDeleteTask() {
@@ -275,9 +268,9 @@
         entries={gradebook.entries}
         attendance={gradebook.attendance}
         {onAddTask}
-        onRenameTask={(task) => {
-            renaming = task;
-            renameOpen = true;
+        onEditTask={(task) => {
+            editingTask = task;
+            taskOpen = true;
         }}
         onDeleteTask={(task, marks) => {
             deleting = { task, marks };
@@ -330,19 +323,18 @@
     }}
 />
 
-<TextPromptDialog
-    bind:open={renameOpen}
-    title="Задача {renaming?.order ?? ''}"
-    description="Короткое название видно в заголовке столбца и родителям."
-    label="Название"
-    value={renaming?.title ?? ""}
-    placeholder="Например, «Ладья на шахматной доске»"
-    onSubmit={onRename}
+<TaskDialog
+    bind:open={taskOpen}
+    lessonId={lesson.id}
+    task={editingTask}
+    onSaved={async () => {
+        await invalidateAll();
+    }}
 />
 
 <ConfirmDialog
     bind:open={deleteTaskOpen}
-    title="Удалить задачу {deleting?.task.order ?? ''}?"
+    title="Удалить задачу {deleting?.task.number ?? ''}?"
     description={deleting?.marks
         ? `Вместе с ней удалятся ${countOf(deleting.marks, ["отметка", "отметки", "отметок"])}.`
         : "Отметок по ней нет."}

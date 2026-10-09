@@ -9,11 +9,9 @@ public class Task
 
     private readonly List<GradebookEntry> _entries = [];
 
-    internal Task(Lesson lesson, long order, string? title = null)
+    internal Task(Lesson lesson, string number, string? title = null)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(order);
-
-        Order = order;
+        Number = TaskNumber.Normalize(number);
         LessonId = lesson.Id;
         Lesson = lesson;
         Rename(title);
@@ -26,7 +24,13 @@ public class Task
 
     public Guid Id { get; private set; } = Guid.NewGuid();
 
-    /// <summary>Порядковый номер задачи в занятии, начиная с 1.</summary>
+    /// <summary>Номер в свободной форме, уникален в занятии: «1», «1.1», «2а». См. <see cref="TaskNumber"/>.</summary>
+    public string Number { get; internal set; } = null!;
+
+    /// <summary>
+    /// Позиция в занятии (с 1) по естественному порядку номеров; пересчитывает <see cref="Lesson"/>,
+    /// чтобы сортировать в запросах без разбора номеров.
+    /// </summary>
     public long Order { get; internal set; }
 
     /// <summary>Необязательное название: «Задача 2: Рекурсия» в сетке и трафарете.</summary>

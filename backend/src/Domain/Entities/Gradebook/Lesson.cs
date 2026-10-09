@@ -1,5 +1,6 @@
 using JetBrains.Annotations;
 using SchoolClubs.Domain.Common;
+using SchoolClubs.Domain.Common.Exceptions;
 
 namespace SchoolClubs.Domain.Entities.Gradebook;
 
@@ -39,7 +40,7 @@ public class Lesson : IAuditableEntity
     public Guid ParentGroupId { get; private set; }
     public Group ParentGroup { get; private set; } = null!;
 
-    /// <summary>Задачи занятия; порядок задаёт <see cref="Task.Order"/>.</summary>
+    /// <summary>Задачи занятия; порядок задаёт <see cref="Task.Order"/> по номерам.</summary>
     public IReadOnlyCollection<Task> Tasks
     {
         get { return _tasks; }
@@ -68,16 +69,37 @@ public class Lesson : IAuditableEntity
         Topic = trimmed;
     }
 
-    /// <summary>Добавляет задачу в конец списка задач занятия.</summary>
-    public Task AddTask(string? title = null)
+    /// <summary>Добавляет задачу; без номера — следующий целый после имеющихся («1.1», «1.2» → «2»).</summary>
+    /// <exception cref="ArgumentException">Номер некорректен или уже занят.</exception>
+    public Task AddTask(string? title = null, string? number = null)
     {
-        var order = _tasks.Count == 0 ? 1 : _tasks.Max(t => t.Order) + 1;
-        var task = new Task(this, order, title);
+        var task = new Task(this, number ?? TaskNumber.Next(_tasks.Select(t => t.Number)), title);
+        EnsureNumberIsFree(task.Number, null);
         _tasks.Add(task);
+        Reorder();
         return task;
     }
 
-    /// <summary>Удаляет задачу и сдвигает порядковые номера следующих за ней.</summary>
+    /// <summary>Меняет номер задачи; порядок задач следует за номерами.</summary>
+    /// <exception cref="ArgumentException">Номер некорректен или занят другой задачей.</exception>
+    public void RenumberTask(Task task, string number)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+        var existing = _tasks.FirstOrDefault(t => t.Id == task.Id)
+                       ?? throw new ArgumentException("task doesn't belong to the lesson", nameof(task));
+
+        var normalized = TaskNumber.Normalize(number);
+        EnsureNumberIsFree(normalized, existing);
+        existing.Number = normalized;
+        Reorder();
+    }
+
+    public Task? FindTaskByNumber(string number)
+    {
+        return _tasks.FirstOrDefault(t => TaskNumber.AreSame(t.Number, number.Trim()));
+    }
+
+    /// <summary>Удаляет задачу; номера остальных не меняются, позиции сдвигаются.</summary>
     /// <returns><c>false</c>, если задача не относится к занятию.</returns>
     public bool RemoveTask(Task task)
     {
@@ -87,8 +109,25 @@ public class Lesson : IAuditableEntity
             return false;
 
         _tasks.Remove(existing);
-        foreach (var next in _tasks.Where(t => t.Order > existing.Order))
-            next.Order--;
+        Reorder();
         return true;
+    }
+
+    private void EnsureNumberIsFree(string number, Task? except)
+    {
+        if (_tasks.Any(t => t != except && TaskNumber.AreSame(t.Number, number)))
+            throw new DuplicateTaskNumberException(number);
+    }
+
+    /// <summary>При равных номерах (старые данные) сохраняется прежний порядок.</summary>
+    private void Reorder()
+    {
+        var ordered = _tasks
+            .OrderBy(t => t.Number, TaskNumber.Comparer)
+            .ThenBy(t => t.Order == 0 ? long.MaxValue : t.Order)
+            .ToList();
+        for (var i = 0; i < ordered.Count; i++)
+            if (ordered[i].Order != i + 1)
+                ordered[i].Order = i + 1;
     }
 }

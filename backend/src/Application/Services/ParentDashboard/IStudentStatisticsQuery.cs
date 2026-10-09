@@ -4,6 +4,7 @@ using SchoolClubs.Domain.Entities.Gradebook;
 namespace SchoolClubs.Application.Services.ParentDashboard;
 
 /// <summary>Опубликованное занятие группы с хотя бы одной задачей.</summary>
+/// <param name="Tasks">В порядке номеров.</param>
 public record PublishedLessonRow(
     Guid Id,
     DateOnly Date,
@@ -11,7 +12,7 @@ public record PublishedLessonRow(
     string? Topic,
     IReadOnlyList<LessonTaskRow> Tasks);
 
-public record LessonTaskRow(Guid Id, long Order, string? Title);
+public record LessonTaskRow(Guid Id, string Number, string? Title);
 
 /// <summary>Отметка без замечания: для агрегатов по группе комментарии не нужны.</summary>
 public record MarkRow(Guid StudentId, Guid LessonId, Guid TaskId, GradebookEntryTaskStatus Status);

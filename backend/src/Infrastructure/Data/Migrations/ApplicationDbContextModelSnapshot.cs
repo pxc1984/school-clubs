@@ -398,6 +398,12 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("lesson_id");
 
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("number");
+
                     b.Property<long>("Order")
                         .HasColumnType("bigint")
                         .HasColumnName("order");

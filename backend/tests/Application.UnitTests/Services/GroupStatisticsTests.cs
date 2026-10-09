@@ -28,7 +28,7 @@ public class GroupStatisticsTests
     private PublishedLessonRow AddLesson(int day, int tasks)
     {
         var lesson = new PublishedLessonRow(Guid.NewGuid(), new DateOnly(2026, 10, day), null, null,
-            Enumerable.Range(1, tasks).Select(i => new LessonTaskRow(Guid.NewGuid(), i, null)).ToList());
+            Enumerable.Range(1, tasks).Select(i => new LessonTaskRow(Guid.NewGuid(), i.ToString(), null)).ToList());
         _lessons.Add(lesson);
         return lesson;
     }

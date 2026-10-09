@@ -14,7 +14,7 @@ public static class TeacherLessons
         group.MapDelete("/{id:guid}", Delete);
 
         group.MapPost("/{id:guid}/tasks", AddTask);
-        group.MapPut("/{id:guid}/tasks/{taskId:guid}", RenameTask);
+        group.MapPut("/{id:guid}/tasks/{taskId:guid}", UpdateTask);
         group.MapDelete("/{id:guid}/tasks/{taskId:guid}", DeleteTask);
 
         group.MapGet("/{id:guid}/gradebook", GetGradebook);
@@ -55,20 +55,20 @@ public static class TeacherLessons
     [EndpointSummary("Add task")]
     public static async Task<LessonDto> AddTask(ILessonService service,
         Guid id,
-        TaskTitleRequest request,
+        TaskRequest request,
         CancellationToken cancellationToken)
     {
         return await service.AddTaskAsync(id, request, cancellationToken);
     }
 
-    [EndpointSummary("Rename task")]
-    public static async Task<LessonDto> RenameTask(ILessonService service,
+    [EndpointSummary("Change task number and title")]
+    public static async Task<LessonDto> UpdateTask(ILessonService service,
         Guid id,
         Guid taskId,
-        TaskTitleRequest request,
+        TaskRequest request,
         CancellationToken cancellationToken)
     {
-        return await service.RenameTaskAsync(id, taskId, request, cancellationToken);
+        return await service.UpdateTaskAsync(id, taskId, request, cancellationToken);
     }
 
     [EndpointSummary("Delete task with its marks")]

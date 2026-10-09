@@ -1,3 +1,4 @@
+using System.Globalization;
 using FluentValidation.Results;
 using SchoolClubs.Application.Common;
 using SchoolClubs.Application.Common.Exceptions;
@@ -30,7 +31,7 @@ public class GradebookImportService(
         var gradebook = await gradebooks.GetByLessonIdAsync(lessonId, cancellationToken);
 
         var template = new GradebookTemplate(group.Id, group.Title, lesson.Id, lesson.Date, lesson.Topic,
-            lesson.Tasks.OrderBy(t => t.Order).Select(t => new TemplateTask(t.Id, t.Order, t.Title)).ToList(),
+            lesson.Tasks.OrderBy(t => t.Order).Select(t => new TemplateTask(t.Id, t.Number, t.Title)).ToList(),
             Students(group),
             gradebook?.GradebookEntries
                 .Where(e => group.HasStudent(e.StudentId))
@@ -50,7 +51,9 @@ public class GradebookImportService(
 
         var group = await access.GetGroupAsync(groupId, cancellationToken);
         var template = new GradebookTemplate(group.Id, group.Title, null, null, null,
-            Enumerable.Range(1, taskCount).Select(n => new TemplateTask(null, n, null)).ToList(),
+            Enumerable.Range(1, taskCount)
+                .Select(n => new TemplateTask(null, n.ToString(CultureInfo.InvariantCulture), null))
+                .ToList(),
             Students(group), [], timeProvider.GetUtcNow());
         return new FileDto($"{SafeFileName(group.Title)}_трафарет.xlsx", XlsxContentType,
             spreadsheet.Generate(template));
@@ -103,11 +106,10 @@ public class GradebookImportService(
 
         if (request.CreateMissingTasks && plan.MissingTaskNumbers.Count > 0)
         {
-            var needed = plan.MissingTaskNumbers.Max();
-            if (needed > IGradebookSpreadsheet.MaxTasks)
+            if (lesson.Tasks.Count + plan.MissingTaskNumbers.Count > IGradebookSpreadsheet.MaxTasks)
                 throw new ArgumentException($"lesson can't have more than {IGradebookSpreadsheet.MaxTasks} tasks");
-            while (lesson.Tasks.Count < needed)
-                lesson.AddTask();
+            foreach (var number in plan.MissingTaskNumbers)
+                lesson.AddTask(number: number);
             plan = GradebookImportPlanner.Plan(parsed, lesson, group, gradebook, mappings);
         }
 
