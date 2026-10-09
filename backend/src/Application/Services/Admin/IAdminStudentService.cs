@@ -22,4 +22,9 @@ public interface IAdminStudentService
     /// <summary>Разбор вставленного столбика ФИО с подсказкой возможных дублей — для предпросмотра.</summary>
     Task<IReadOnlyList<ParsedNameDto>> ParseNamesAsync(ParseNamesRequest request,
         CancellationToken cancellationToken = default);
+
+    /// <summary>То же для XLSX: первый лист, строка — ученик; <see cref="ParsedNameDto.Line"/> — номер строки листа.</summary>
+    /// <exception cref="GradebookImport.InvalidSpreadsheetException"/>
+    Task<IReadOnlyList<ParsedNameDto>> ParseSpreadsheetAsync(Stream content,
+        CancellationToken cancellationToken = default);
 }

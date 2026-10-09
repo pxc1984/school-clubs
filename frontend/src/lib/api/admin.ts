@@ -421,6 +421,18 @@ export async function parseNames(text: string): Promise<ParsedNameDto[]> {
     return response.data;
 }
 
+/** Первый лист .xlsx: строка — ученик (ФИО одной ячейкой или по колонкам); line — номер строки листа */
+export async function parseNamesXlsx(file: File): Promise<ParsedNameDto[]> {
+    const form = new FormData();
+    form.append("file", file);
+    const response = await api.post<ParsedNameDto[]>(
+        "/admin/students/parse-xlsx",
+        form,
+        { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    return response.data;
+}
+
 export async function getErasurePreview(id: Guid): Promise<ErasurePreviewDto> {
     const response = await api.get<ErasurePreviewDto>(
         `/admin/students/${id}/erase`,

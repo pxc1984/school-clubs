@@ -1,6 +1,7 @@
 using FluentValidation;
 using SchoolClubs.Application.Services.Common;
 using SchoolClubs.Application.Common.Exceptions;
+using SchoolClubs.Application.Services.GradebookImport;
 using SchoolClubs.Domain.Abstractions;
 using SchoolClubs.Domain.Entities.Users;
 using ValidationException = SchoolClubs.Application.Common.Exceptions.ValidationException;
@@ -13,6 +14,7 @@ public class AdminStudentService(
     IUserRepository users,
     ILessonGradebookRepository gradebooks,
     IUnitOfWork unitOfWork,
+    IStudentListSpreadsheet spreadsheet,
     IValidator<CreateStudentRequest> createValidator,
     IValidator<UpdateStudentRequest> updateValidator,
     IValidator<ParseNamesRequest> parseValidator) : IAdminStudentService
@@ -122,9 +124,32 @@ public class AdminStudentService(
         CancellationToken cancellationToken = default)
     {
         await ValidateAsync(parseValidator, request, cancellationToken);
+        return await ParseLinesAsync(request.Text, cancellationToken);
+    }
 
+    public async Task<IReadOnlyList<ParsedNameDto>> ParseSpreadsheetAsync(Stream content,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+
+        using var buffer = new MemoryStream();
+        var chunk = new byte[81920];
+        int read;
+        while ((read = await content.ReadAsync(chunk, cancellationToken)) > 0)
+        {
+            buffer.Write(chunk, 0, read);
+            if (buffer.Length > GradebookImportService.MaxFileSize)
+                throw new InvalidSpreadsheetException("Файл больше 2 МБ.");
+        }
+
+        buffer.Position = 0;
+        return await ParseLinesAsync(StudentListSheet.ToText(spreadsheet.ReadRows(buffer)), cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<ParsedNameDto>> ParseLinesAsync(string text, CancellationToken cancellationToken)
+    {
         var result = new List<ParsedNameDto>();
-        foreach (var line in StudentNameParser.Parse(request.Text))
+        foreach (var line in StudentNameParser.Parse(text))
         {
             var matches = line.Student is null
                 ? []

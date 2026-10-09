@@ -6,6 +6,7 @@ using Amazon.Runtime;
 using Amazon.S3;
 using Microsoft.Extensions.Options;
 using SchoolClubs.Application.Common.Interfaces;
+using SchoolClubs.Application.Services.Admin;
 using SchoolClubs.Application.Services.GradebookImport;
 using SchoolClubs.Application.Services.ParentDashboard;
 using SchoolClubs.Domain.Abstractions;
@@ -55,6 +56,7 @@ public static class DependencyInjection
 
         builder.Services.AddSingleton<IPasswordHasher, PasswordHasher>();
         builder.Services.AddSingleton<IGradebookSpreadsheet, ClosedXmlGradebookSpreadsheet>();
+        builder.Services.AddSingleton<IStudentListSpreadsheet, ClosedXmlStudentListSpreadsheet>();
         builder.AddFileStorage();
         // Аватарки провайдеров входа: картинки маленькие, ждать долго нет смысла.
         builder.Services.AddHttpClient<IRemoteFileDownloader, RemoteFileDownloader>(client =>

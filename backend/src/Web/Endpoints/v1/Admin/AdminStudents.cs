@@ -14,6 +14,7 @@ public static class AdminStudents
         group.MapDelete("/{id:guid}", Delete);
         group.MapPost("/{id:guid}/merge-into/{targetId:guid}", Merge);
         group.MapPost("/parse-names", ParseNames);
+        group.MapPost("/parse-xlsx", ParseSpreadsheet).DisableAntiforgery();
     }
 
     [EndpointSummary("Search students")]
@@ -73,5 +74,14 @@ public static class AdminStudents
         CancellationToken cancellationToken)
     {
         return await service.ParseNamesAsync(request, cancellationToken);
+    }
+
+    [EndpointSummary("Parse an XLSX list of student names with duplicate hints")]
+    public static async Task<IReadOnlyList<ParsedNameDto>> ParseSpreadsheet(IAdminStudentService service,
+        IFormFile file,
+        CancellationToken cancellationToken)
+    {
+        await using var content = file.OpenReadStream();
+        return await service.ParseSpreadsheetAsync(content, cancellationToken);
     }
 }

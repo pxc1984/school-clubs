@@ -5,6 +5,7 @@
         addAdminGroupStudents,
         listStudents,
         parseNames,
+        parseNamesXlsx,
         type StudentListItemDto,
         type ParsedNameDto,
     } from "$lib/api/admin";
@@ -59,10 +60,23 @@
             : [...picked, student];
     }
 
+    let fileInput = $state<HTMLInputElement | null>(null);
+
     async function parse() {
+        await preview(() => parseNames(text));
+    }
+
+    async function onFileSelected(event: Event) {
+        const input = event.currentTarget as HTMLInputElement;
+        const file = input.files?.[0];
+        input.value = "";
+        if (file) await preview(() => parseNamesXlsx(file));
+    }
+
+    async function preview(load: () => Promise<ParsedNameDto[]>) {
         busy = true;
         try {
-            parsed = await parseNames(text);
+            parsed = await load();
             // по умолчанию: совпадение в группе уже есть — пропустить,
             // есть дубль в базе — взять его, иначе завести нового
             choices = Object.fromEntries(
@@ -201,15 +215,35 @@
                             строки — по желанию.
                         </Field.Description>
                     </Field.Field>
-                    <Button
-                        variant="outline"
-                        class="w-fit"
-                        disabled={busy || !text.trim()}
-                        onclick={parse}
-                    >
-                        {#if busy}<Spinner />{/if}
-                        Разобрать
-                    </Button>
+                    <div class="flex flex-wrap gap-2">
+                        <Button
+                            variant="outline"
+                            disabled={busy || !text.trim()}
+                            onclick={parse}
+                        >
+                            {#if busy}<Spinner />{/if}
+                            Разобрать
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            disabled={busy}
+                            onclick={() => fileInput?.click()}
+                        >
+                            Загрузить .xlsx
+                        </Button>
+                    </div>
+                    <p class="text-xs text-muted-foreground">
+                        В .xlsx берётся первый лист: строка — ученик, ФИО одной
+                        ячейкой или по колонкам «Фамилия, Имя, Отчество, Класс».
+                        Заголовок и колонка «№» пропускаются.
+                    </p>
+                    <input
+                        bind:this={fileInput}
+                        type="file"
+                        accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        class="hidden"
+                        onchange={onFileSelected}
+                    />
                 {:else}
                     <ul class="divide-y rounded-lg border text-sm">
                         {#each parsed as line (line.line)}

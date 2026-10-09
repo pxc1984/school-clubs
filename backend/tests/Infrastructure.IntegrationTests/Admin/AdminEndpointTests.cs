@@ -1,5 +1,7 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using ClosedXML.Excel;
 using Microsoft.Extensions.DependencyInjection;
 using SchoolClubs.Application.Services.Admin;
 using SchoolClubs.Application.Services.Auth;
@@ -286,5 +288,43 @@ public class AdminEndpointTests : TestBase
         parsed[1].Matches.ShouldBeEmpty();
         parsed[1].Student!.Grade.ShouldBe("7Б");
         parsed[2].Error.ShouldNotBeNull();
+    }
+
+    [Test]
+    public async Task ParseXlsx_ReadsFirstSheet_SuggestsExistingStudents()
+    {
+        var existing = await (await _admin.PostAsJsonAsync($"{Admin}/students",
+                new CreateStudentRequest("Иванов", "Пётр", null, null, null)))
+            .Content.ReadFromJsonAsync<StudentDetailsDto>();
+
+        using var workbook = new XLWorkbook();
+        var sheet = workbook.AddWorksheet("Список");
+        sheet.Cell(1, 1).Value = "ФИО";
+        sheet.Cell(1, 2).Value = "Класс";
+        sheet.Cell(2, 1).Value = "Иванов Пётр";
+        sheet.Cell(3, 1).Value = "Петрова Анна Игоревна";
+        sheet.Cell(3, 2).Value = 7;
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+
+        var response = await UploadAsync(stream.ToArray());
+        response.EnsureSuccessStatusCode();
+        var parsed = await response.Content.ReadFromJsonAsync<List<ParsedNameDto>>();
+
+        parsed!.Count.ShouldBe(2);
+        parsed[0].Line.ShouldBe(2);
+        parsed[0].Matches.ShouldHaveSingleItem().Id.ShouldBe(existing!.Id);
+        parsed[1].Student.ShouldBe(new NewStudentRequest("Петрова", "Анна", "Игоревна", "7"));
+
+        (await UploadAsync("не таблица"u8.ToArray())).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    private async Task<HttpResponseMessage> UploadAsync(byte[] file)
+    {
+        using var form = new MultipartFormDataContent();
+        var content = new ByteArrayContent(file);
+        content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        form.Add(content, "file", "students.xlsx");
+        return await _admin.PostAsync($"{Admin}/students/parse-xlsx", form);
     }
 }
