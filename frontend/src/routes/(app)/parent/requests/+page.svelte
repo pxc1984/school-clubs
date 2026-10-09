@@ -26,6 +26,7 @@
         { value: "Mother", label: "Мама" },
         { value: "Father", label: "Папа" },
         { value: "Guardian", label: "Опекун" },
+        { value: "Other", label: "Другое" },
     ];
 
     let { data } = $props();
@@ -63,8 +64,7 @@
         if (!form.firstName.trim()) result.childFirstName = "Укажите имя";
         if (!form.relation) result.relation = "Укажите, кем приходитесь";
         if (!form.consent)
-            result.acceptPersonalDataPolicy =
-                "Без согласия запрос не отправить";
+            result.acceptChildDataConsent = "Без согласия запрос не отправить";
         return result;
     }
 
@@ -83,7 +83,7 @@
                 grade: form.grade.trim() || null,
                 relation: form.relation as Relation,
                 comment: form.comment.trim() || null,
-                acceptPersonalDataPolicy: form.consent,
+                acceptChildDataConsent: form.consent,
             });
             form = emptyForm();
             await invalidateAll();
@@ -222,7 +222,7 @@
                     id="consent"
                     bind:checked={form.consent}
                     prefix={CHILD_CONSENT_PREFIX}
-                    error={errors.acceptPersonalDataPolicy}
+                    error={errors.acceptChildDataConsent}
                 />
             </Field.Group>
 
@@ -264,10 +264,10 @@
                             {/if}
                         </div>
                         <div class="text-sm text-muted-foreground">
-                            {request.groupTitle}{request.grade
+                            {request.group.title}{request.grade
                                 ? ` · ${request.grade}`
                                 : ""} · отправлен {formatDateTime(
-                                request.createdAt,
+                                request.created,
                             )}
                         </div>
                         {#if request.status === "Rejected" && request.rejectReason}

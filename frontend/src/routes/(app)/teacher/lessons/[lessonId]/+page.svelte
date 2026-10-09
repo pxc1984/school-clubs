@@ -21,7 +21,6 @@
         publishGradebook,
         renameTask,
         unpublishGradebook,
-        type ImportTarget,
     } from "$lib/api/teacher";
     import type { TaskDto } from "$lib/api/types";
     import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
@@ -50,10 +49,6 @@
     const lesson = $derived(data.lesson);
     const gradebook = $derived(data.gradebook);
     const published = $derived(gradebook.publishedAt !== null);
-    const importTarget = $derived<ImportTarget>({
-        kind: "lesson",
-        lessonId: lesson.id,
-    });
 
     let grid = $state<GradeGrid | null>(null);
     let saveState = $state<SaveState>("saved");
@@ -290,11 +285,11 @@
     />
 {/if}
 
-{#if gradebook.imports?.length}
+{#if data.imports.length}
     <section class="mt-8">
         <h2 class="mb-2 text-sm font-medium">Загруженные файлы</h2>
         <ul class="divide-y rounded-lg border text-sm">
-            {#each gradebook.imports ?? [] as file (file.uploadId)}
+            {#each data.imports as file (file.uploadId)}
                 <li class="flex flex-wrap items-center gap-2 px-4 py-2">
                     <FileSpreadsheetIcon class="size-4 text-muted-foreground" />
                     <a
@@ -308,8 +303,8 @@
                     <span class="text-muted-foreground">
                         {formatDateTime(file.uploadedAt)}
                     </span>
-                    {#if !file.applied}
-                        <Badge variant="outline">не применён</Badge>
+                    {#if file.attached}
+                        <Badge variant="secondary">в журнале</Badge>
                     {/if}
                 </li>
             {/each}
@@ -319,7 +314,8 @@
 
 <ImportDialog
     bind:open={importOpen}
-    target={importTarget}
+    lessonId={lesson.id}
+    students={gradebook.students}
     onApplied={async () => {
         await invalidateAll();
     }}

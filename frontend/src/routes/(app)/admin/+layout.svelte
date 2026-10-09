@@ -20,9 +20,7 @@
     }
 
     function badge(href: string): number {
-        if (href === "/admin") return data.counters?.pendingRequests ?? 0;
-        if (href === "/admin/students")
-            return data.counters?.pendingErasures ?? 0;
+        if (href === "/admin") return data.pendingRequests;
         return 0;
     }
 </script>

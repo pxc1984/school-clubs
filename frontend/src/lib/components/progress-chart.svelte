@@ -42,19 +42,23 @@
     const band = $derived.by(() => {
         const points = series
             .map((point, index) => ({ ...point, index }))
-            .filter((point) => point.p25 !== null && point.p75 !== null);
+            .filter(
+                (point) => point.groupP25 !== null && point.groupP75 !== null,
+            );
         if (points.length < 2) return "";
-        const upper = points.map((p) => `${x(p.index)},${y(p.p75!)}`);
+        const upper = points.map((p) => `${x(p.index)},${y(p.groupP75!)}`);
         const lower = points
             .toReversed()
-            .map((p) => `${x(p.index)},${y(p.p25!)}`);
+            .map((p) => `${x(p.index)},${y(p.groupP25!)}`);
         return `M${upper.join("L")}L${lower.join("L")}Z`;
     });
 
     const childPath = $derived(path(series.map((point) => point.score)));
-    const medianPath = $derived(path(series.map((point) => point.median)));
+    const medianPath = $derived(path(series.map((point) => point.groupMedian)));
     const hasBand = $derived(band !== "");
-    const hasMedian = $derived(series.some((point) => point.median !== null));
+    const hasMedian = $derived(
+        series.some((point) => point.groupMedian !== null),
+    );
 
     // подписи оси X прореживаем, чтобы не налезали
     const labelStep = $derived(
@@ -183,9 +187,9 @@
                         ? "не был"
                         : formatPercent(active.score)}
                 </div>
-                {#if active.median !== null}
+                {#if active.groupMedian !== null}
                     <div class="text-muted-foreground">
-                        Медиана группы: {formatPercent(active.median)}
+                        Медиана группы: {formatPercent(active.groupMedian)}
                     </div>
                 {/if}
             </div>
@@ -206,9 +210,9 @@
                                 : formatPercent(point.score)}
                         </td>
                         <td>
-                            {point.median === null
+                            {point.groupMedian === null
                                 ? "—"
-                                : formatPercent(point.median)}
+                                : formatPercent(point.groupMedian)}
                         </td>
                     </tr>
                 {/each}

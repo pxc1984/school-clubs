@@ -4,18 +4,15 @@
     import DownloadIcon from "@lucide/svelte/icons/download";
     import PlusIcon from "@lucide/svelte/icons/plus";
     import Trash2Icon from "@lucide/svelte/icons/trash-2";
-    import UploadIcon from "@lucide/svelte/icons/upload";
     import UserPlusIcon from "@lucide/svelte/icons/user-plus";
     import {
         addGroupStudent,
         groupTemplateUrl,
         removeGroupStudent,
         type GroupMatrixDto,
-        type ImportTarget,
     } from "$lib/api/teacher";
     import type { StudentDto } from "$lib/api/types";
     import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
-    import ImportDialog from "$lib/components/import-dialog.svelte";
     import LessonDialog from "$lib/components/lesson-dialog.svelte";
     import PageHeader from "$lib/components/page-header.svelte";
     import StudentDialog, {
@@ -44,8 +41,6 @@
     let { data } = $props();
 
     const groupId = $derived(data.group.id);
-    const importTarget = $derived<ImportTarget>({ kind: "group", groupId });
-
     // число задач по умолчанию — как на последнем занятии
     const lastTaskCount = $derived(data.lessons[0]?.taskCount ?? 5);
 
@@ -58,7 +53,6 @@
     }
 
     let lessonOpen = $state(false);
-    let importOpen = $state(false);
     let templateTasks = $derived(lastTaskCount);
 
     let studentOpen = $state(false);
@@ -140,10 +134,6 @@
             <Button onclick={() => (lessonOpen = true)}>
                 <PlusIcon />
                 Новое занятие
-            </Button>
-            <Button variant="outline" onclick={() => (importOpen = true)}>
-                <UploadIcon />
-                Загрузить XLSX
             </Button>
             <Popover.Root>
                 <Popover.Trigger class={buttonVariants({ variant: "outline" })}>
@@ -447,12 +437,6 @@
     bind:open={lessonOpen}
     mode={{ kind: "create", groupId, taskCount: lastTaskCount }}
     onSaved={(lesson) => goto(`/teacher/lessons/${lesson.id}`)}
-/>
-
-<ImportDialog
-    bind:open={importOpen}
-    target={importTarget}
-    onApplied={(result) => goto(`/teacher/lessons/${result.lessonId}`)}
 />
 
 <StudentDialog bind:open={studentOpen} onSubmit={addStudent} />

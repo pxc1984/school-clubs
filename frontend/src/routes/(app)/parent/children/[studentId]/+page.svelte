@@ -90,11 +90,11 @@
 
         <!-- главная цифра наверху -->
         <section class="mb-6">
-            {#if summary.totalTasks}
+            {#if summary.tasksTotal}
                 <p class="text-4xl font-semibold tracking-tight">
-                    {summary.solvedTasks}
+                    {summary.tasksSolved}
                     <span class="text-xl font-normal text-muted-foreground">
-                        из {countOf(summary.totalTasks, [
+                        из {countOf(summary.tasksTotal, [
                             "задачи",
                             "задач",
                             "задач",
@@ -107,16 +107,16 @@
                 </p>
             {/if}
             <div class="mt-3 flex flex-wrap gap-2">
-                {#if summary.bucket}
+                {#if summary.position}
                     <Badge>
                         <TrophyIcon />
-                        {BUCKET_LABELS[summary.bucket]}
+                        {BUCKET_LABELS[summary.position]}
                     </Badge>
                 {/if}
-                {#if summary.streak}
+                {#if summary.perfectStreak}
                     <Badge variant="secondary">
                         <FlameIcon />
-                        {countOf(summary.streak, [
+                        {countOf(summary.perfectStreak, [
                             "занятие",
                             "занятия",
                             "занятий",
@@ -128,8 +128,8 @@
                 <div>
                     <dt class="text-muted-foreground">Посещаемость</dt>
                     <dd class="font-medium">
-                        Был на {summary.attendedLessons} из {countOf(
-                            summary.totalLessons,
+                        Был на {summary.lessonsAttended} из {countOf(
+                            summary.lessonsTotal,
                             ["занятия", "занятий", "занятий"],
                         )}
                     </dd>
@@ -145,10 +145,10 @@
             </dl>
         </section>
 
-        {#if summary.series.length > 1}
+        {#if summary.chart.length > 1}
             <section class="mb-8">
                 <h2 class="mb-3 text-lg font-semibold">Динамика</h2>
-                <ProgressChart series={summary.series} />
+                <ProgressChart series={summary.chart} />
             </section>
         {/if}
 
@@ -196,7 +196,7 @@
                                         class="shrink-0 text-right text-sm font-medium"
                                     >
                                         {#if lesson.attended}
-                                            {lesson.solved} из {lesson.total}
+                                            {lesson.solved} из {lesson.taskCount}
                                         {:else}
                                             <span
                                                 class="font-normal text-muted-foreground"
@@ -214,7 +214,7 @@
                                 {:else}
                                     {#if lesson.groupAverageSolved !== null}
                                         <p class="mb-3 text-muted-foreground">
-                                            Решил {lesson.solved} из {lesson.total},
+                                            Решил {lesson.solved} из {lesson.taskCount},
                                             в среднем по группе — {formatDecimal(
                                                 lesson.groupAverageSolved,
                                             )}
@@ -247,12 +247,12 @@
                                                             {task.comment}
                                                         </blockquote>
                                                     {/if}
-                                                    {#if task.solvedCount !== null && task.attendedCount !== null}
+                                                    {#if task.groupSolved !== null && task.groupAttended !== null}
                                                         <div
                                                             class="mt-0.5 text-xs text-muted-foreground"
                                                         >
-                                                            Решили {task.solvedCount}
-                                                            из {task.attendedCount}
+                                                            Решили {task.groupSolved}
+                                                            из {task.groupAttended}
                                                         </div>
                                                     {/if}
                                                 </div>

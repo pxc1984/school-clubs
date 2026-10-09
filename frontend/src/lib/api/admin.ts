@@ -4,6 +4,7 @@ import type {
     AccessRequestStatus,
     DateOnly,
     DateTimeString,
+    GroupRefDto,
     GroupShortDto,
     Guid,
     PersonName,
@@ -12,17 +13,13 @@ import type {
     UserShortDto,
 } from "$lib/api/types";
 
-export type AdminCountersDto = {
-    pendingRequests: number;
-    /** Удаления ПДн, у которых не дочищены файлы в S3 */
-    pendingErasures: number;
-};
-
 export type AdminAccessRequestDto = AccessRequestDto & {
     parent: UserShortDto & {
         phone: string | null;
         children: StudentDto[];
     };
+    /** Ученик, к которому привязан одобренный запрос */
+    student: StudentDto | null;
     /** Похожие ученики из указанной группы */
     suggestions: StudentDto[];
 };
@@ -36,8 +33,6 @@ export type ApproveRequest =
     | { studentId: null; newStudent: NewStudentRequest };
 
 export type UserRefDto = PersonName & { id: Guid };
-
-export type GroupRefDto = GroupShortDto & { isArchived: boolean };
 
 export type AdminGroupDto = GroupShortDto & {
     description: string | null;
@@ -127,9 +122,14 @@ export type ErasureRecordDto = {
     filesCleaned: boolean;
 };
 
-export async function getCounters(): Promise<AdminCountersDto> {
-    const response = await api.get<AdminCountersDto>("/admin/counters");
-    return response.data;
+export type { GroupRefDto };
+
+/** Запросы доступа, ждущие решения, — бейдж в навигации */
+export async function getPendingRequestCount(): Promise<number> {
+    const response = await api.get<{ count: number }>(
+        "/admin/access-requests/pending-count",
+    );
+    return response.data.count;
 }
 
 // --- запросы доступа

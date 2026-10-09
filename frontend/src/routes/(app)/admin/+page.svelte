@@ -82,13 +82,13 @@
                             {request.childFirstName}
                         </span>
                         <span class="text-muted-foreground">
-                            · {request.groupTitle}
+                            · {request.group.title}
                         </span>
                         <span
                             class="block truncate text-sm text-muted-foreground"
                         >
                             от {fullName(request.parent)} ·
-                            {formatDateTime(request.createdAt)}
+                            {formatDateTime(request.created)}
                         </span>
                     </span>
                     {#if request.suggestions.length && request.status === "Pending"}

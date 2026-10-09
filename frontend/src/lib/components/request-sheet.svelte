@@ -27,6 +27,7 @@
         Mother: "мама",
         Father: "папа",
         Guardian: "опекун",
+        Other: "другое",
     };
 
     let {
@@ -122,7 +123,7 @@
                     <RequestStatusBadge status={request.status} />
                 </Sheet.Title>
                 <Sheet.Description>
-                    {request.groupTitle}{request.grade
+                    {request.group.title}{request.grade
                         ? ` · ${request.grade}`
                         : ""}
                 </Sheet.Description>
@@ -155,7 +156,7 @@
                         </dd>
                     {/if}
                     <dt class="text-muted-foreground">Отправлен</dt>
-                    <dd>{formatDateTime(request.createdAt)}</dd>
+                    <dd>{formatDateTime(request.created)}</dd>
                     {#if request.decidedAt}
                         <dt class="text-muted-foreground">Решение</dt>
                         <dd>{formatDateTime(request.decidedAt)}</dd>
@@ -196,7 +197,7 @@
                                     >
                                         {studentLabel(suggestion)}
                                         <span class="text-muted-foreground">
-                                            — в группе «{request.groupTitle}»
+                                            — в группе «{request.group.title}»
                                         </span>
                                     </Field.Label>
                                 </Field.Field>
@@ -221,7 +222,8 @@
                                     for="choice-new"
                                     class="font-normal"
                                 >
-                                    Новый ученик «{childName}» в группе «{request.groupTitle}»
+                                    Новый ученик «{childName}» в группе «{request
+                                        .group.title}»
                                 </Field.Label>
                             </Field.Field>
                         </RadioGroup.Root>

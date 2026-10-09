@@ -30,6 +30,8 @@ export type GroupShortDto = {
     title: string;
 };
 
+export type GroupRefDto = GroupShortDto & { isArchived: boolean };
+
 export type UserShortDto = PersonName & {
     id: Guid;
     email: string;
@@ -46,12 +48,11 @@ export type TaskDto = {
 export type AccessRequestStatus =
     "Pending" | "Approved" | "Rejected" | "Cancelled";
 
-export type Relation = "Mother" | "Father" | "Guardian";
+export type Relation = "Mother" | "Father" | "Guardian" | "Other";
 
 export type AccessRequestDto = {
     id: Guid;
-    groupId: Guid;
-    groupTitle: string;
+    group: GroupRefDto;
     childFirstName: string;
     childMiddleName: string | null;
     childLastName: string;
@@ -60,6 +61,6 @@ export type AccessRequestDto = {
     comment: string | null;
     status: AccessRequestStatus;
     rejectReason: string | null;
-    createdAt: DateTimeString;
+    created: DateTimeString;
     decidedAt: DateTimeString | null;
 };

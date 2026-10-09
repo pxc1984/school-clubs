@@ -1,9 +1,11 @@
-import { getGradebook, getLesson } from "$lib/api/teacher";
+import { getGradebook, getLesson, listImports } from "$lib/api/teacher";
 
 export async function load({ params }) {
-    const [lesson, gradebook] = await Promise.all([
+    const [lesson, gradebook, imports] = await Promise.all([
         getLesson(params.lessonId),
         getGradebook(params.lessonId),
+        // список файлов — дополнение к журналу, без него страница работает
+        listImports(params.lessonId).catch(() => []),
     ]);
-    return { lesson, gradebook };
+    return { lesson, gradebook, imports };
 }

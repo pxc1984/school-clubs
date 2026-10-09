@@ -6,10 +6,10 @@
     import {
         applyImport,
         previewImport,
-        type ApplyImportResponse,
         type ImportPreviewDto,
-        type ImportTarget,
+        type ImportResultDto,
     } from "$lib/api/teacher";
+    import type { Guid, StudentDto } from "$lib/api/types";
     import GradeChip from "$lib/components/grade-chip.svelte";
     import * as Alert from "$lib/components/ui/alert";
     import { Badge } from "$lib/components/ui/badge";
@@ -21,19 +21,26 @@
     import * as NativeSelect from "$lib/components/ui/native-select";
     import { Spinner } from "$lib/components/ui/spinner";
     import * as Table from "$lib/components/ui/table";
-    import { countOf, formatDate, fullName, shortName } from "$lib/format";
+    import { countOf, fullName, shortName } from "$lib/format";
 
     const MAX_SIZE = 2 * 1024 * 1024;
 
     let {
         open = $bindable(false),
-        target,
+        lessonId,
+        students,
         onApplied,
     }: {
         open?: boolean;
-        target: ImportTarget;
-        onApplied: (result: ApplyImportResponse) => Promise<void> | void;
+        lessonId: Guid;
+        /** Ученики журнала — по ним подписываем изменения (в ответе только id) */
+        students: StudentDto[];
+        onApplied: (result: ImportResultDto) => Promise<void> | void;
     } = $props();
+
+    const studentNames = $derived(
+        new Map(students.map((student) => [student.id, shortName(student)])),
+    );
 
     let file = $state<File | null>(null);
     let fileError = $state<string | null>(null);
@@ -75,7 +82,7 @@
         if (!file) return;
         busy = true;
         try {
-            preview = await previewImport(target, file);
+            preview = await previewImport(lessonId, file);
             mappings = Object.fromEntries(
                 preview.unrecognizedRows.map((row) => [row.row, ""]),
             );
@@ -100,7 +107,8 @@
     );
     const canApply = $derived(
         !!preview &&
-            (!preview.otherLessonDate || confirmOtherLesson) &&
+            !preview.errors.length &&
+            (!preview.lessonMismatch || confirmOtherLesson) &&
             (visibleChanges.length > 0 || mappedRows > 0 || publish),
     );
 
@@ -108,17 +116,19 @@
         if (!preview) return;
         busy = true;
         try {
-            const result = await applyImport(target, preview.uploadId, {
-                mappings: Object.entries(mappings).map(([row, studentId]) => ({
-                    row: Number(row),
-                    studentId: studentId || null,
-                })),
-                confirmOtherLesson,
-                createTasks,
+            const result = await applyImport(lessonId, preview.uploadId, {
+                rowMappings: Object.entries(mappings).map(
+                    ([row, studentId]) => ({
+                        row: Number(row),
+                        studentId: studentId || null,
+                    }),
+                ),
+                confirmLessonMismatch: confirmOtherLesson,
+                createMissingTasks: createTasks,
                 publish,
             });
             toast.success("Журнал обновлён", {
-                description: `Применено отметок: ${result.applied}`,
+                description: `Новых отметок: ${result.created}, изменено: ${result.updated}`,
             });
             await onApplied(result);
             open = false;
@@ -137,9 +147,6 @@
             <Dialog.Description>
                 {#if preview}
                     Проверьте, что изменится, прежде чем применять.
-                {:else if target.kind === "group"}
-                    Занятие определится по дате в файле; если его нет — оно
-                    будет создано.
                 {:else}
                     Заполненный трафарет этого занятия. Ничего не изменится до
                     подтверждения.
@@ -167,20 +174,21 @@
                 <div class="flex flex-wrap items-center gap-2">
                     <FileSpreadsheetIcon class="size-4 text-muted-foreground" />
                     <span class="font-medium">{preview.fileName}</span>
-                    {#if preview.lessonDate}
-                        <Badge variant="secondary">
-                            занятие {formatDate(preview.lessonDate)}
-                        </Badge>
-                    {/if}
                 </div>
 
-                {#if preview.otherLessonDate}
+                {#each preview.errors as error (error)}
+                    <Alert.Root variant="destructive">
+                        <Alert.Title>Применить нельзя</Alert.Title>
+                        <Alert.Description>{error}</Alert.Description>
+                    </Alert.Root>
+                {/each}
+
+                {#if preview.lessonMismatch}
                     <Alert.Root variant="destructive">
                         <Alert.Title>Файл от другого занятия</Alert.Title>
                         <Alert.Description>
-                            Трафарет выгружен для занятия {formatDate(
-                                preview.otherLessonDate,
-                            )}. Возможно, выбран не тот файл.
+                            {preview.lessonMismatch}. Возможно, выбран не тот
+                            файл.
                         </Alert.Description>
                     </Alert.Root>
                     <Field.Field orientation="horizontal">
@@ -213,7 +221,7 @@
                     </Alert.Root>
                 {/each}
 
-                {#if preview.tasksToCreate.length}
+                {#if preview.missingTaskNumbers.length}
                     <Field.Field orientation="horizontal">
                         <Checkbox
                             id="import-create-tasks"
@@ -224,7 +232,7 @@
                                 for="import-create-tasks"
                                 class="font-normal"
                             >
-                                Добавить в занятие задачи {preview.tasksToCreate.join(
+                                Добавить в занятие задачи {preview.missingTaskNumbers.join(
                                     ", ",
                                 )}
                             </Field.Label>
@@ -261,7 +269,9 @@
                                                 : undefined}
                                         >
                                             <Table.Cell>
-                                                {change.studentName}
+                                                {studentNames.get(
+                                                    change.studentId,
+                                                ) ?? `строка ${change.row}`}
                                             </Table.Cell>
                                             <Table.Cell>
                                                 {change.taskNumber}
@@ -276,13 +286,13 @@
                                                     class="inline-flex items-center gap-1.5"
                                                 >
                                                     <GradeChip
-                                                        status={change.oldStatus}
+                                                        status={change.previousStatus}
                                                     />
                                                     <ArrowRightIcon
                                                         class="size-3.5 text-muted-foreground"
                                                     />
                                                     <GradeChip
-                                                        status={change.newStatus}
+                                                        status={change.status}
                                                     />
                                                 </span>
                                             </Table.Cell>
@@ -309,6 +319,11 @@
                                         строка {row.row}:
                                     </span>
                                     «{row.name}»
+                                    <span
+                                        class="block text-xs text-muted-foreground"
+                                    >
+                                        {row.reason}
+                                    </span>
                                 </span>
                                 <NativeSelect.Root
                                     class="w-64"
@@ -363,18 +378,12 @@
                         <div class="max-h-48 overflow-y-auto rounded-lg border">
                             <Table.Root>
                                 <Table.Body>
-                                    {#each preview.cellErrors as cellError (cellError.address)}
+                                    {#each preview.cellErrors as cellError (cellError)}
                                         <Table.Row>
-                                            <Table.Cell class="font-mono">
-                                                {cellError.address}
-                                            </Table.Cell>
-                                            <Table.Cell class="font-mono">
-                                                «{cellError.value}»
-                                            </Table.Cell>
                                             <Table.Cell
                                                 class="whitespace-normal"
                                             >
-                                                {cellError.message}
+                                                {cellError}
                                             </Table.Cell>
                                         </Table.Row>
                                     {/each}

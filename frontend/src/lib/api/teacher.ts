@@ -78,8 +78,10 @@ export type GradebookEntryDto = {
 export type ImportFileDto = {
     uploadId: Guid;
     fileName: string;
+    sizeBytes: number;
     uploadedAt: DateTimeString;
-    applied: boolean;
+    /** Этот файл сейчас прикреплён к журналу (последний применённый импорт) */
+    attached: boolean;
 };
 
 export type GradebookDto = {
@@ -90,8 +92,6 @@ export type GradebookDto = {
     tasks: TaskDto[];
     students: GradebookStudentDto[];
     entries: GradebookEntryDto[];
-    /** Загруженные XLSX — появятся с импортом */
-    imports?: ImportFileDto[];
 };
 
 export type GradebookChangeDto = {
@@ -125,57 +125,57 @@ export type GroupMatrixDto = {
 export type ImportChangeKind = "New" | "Changed" | "Unchanged";
 
 export type ImportChangeDto = {
+    /** Строка файла */
+    row: number;
     studentId: Guid;
-    studentName: string;
+    /** null — задачи с таким номером ещё нет (создастся при createMissingTasks) */
     taskId: Guid | null;
     taskNumber: number;
-    oldStatus: GradeStatus | null;
-    newStatus: GradeStatus;
     kind: ImportChangeKind;
+    status: GradeStatus;
+    previousStatus: GradeStatus | null;
 };
 
 export type UnrecognizedRowDto = {
     row: number;
     name: string;
+    reason: string;
     /** Похожие ученики группы для ручного сопоставления */
     candidates: StudentDto[];
-};
-
-export type CellErrorDto = {
-    address: string;
-    value: string;
-    message: string;
 };
 
 export type ImportPreviewDto = {
     uploadId: Guid;
     fileName: string;
-    /** Файл от другого занятия: применение только с подтверждением */
-    otherLessonDate: DateOnly | null;
     /** Нет листа _meta — сопоставление только по тексту */
     foreignFile: boolean;
-    /** Для импорта с экрана группы: дата занятия из файла */
-    lessonDate: DateOnly | null;
+    /** «Файл от занятия 12.09»: применение только с подтверждением */
+    lessonMismatch: string | null;
     changes: ImportChangeDto[];
     unrecognizedRows: UnrecognizedRowDto[];
     missingStudents: StudentDto[];
-    cellErrors: CellErrorDto[];
     /** Номера задач из файла, которых нет в занятии */
-    tasksToCreate: number[];
+    missingTaskNumbers: number[];
+    /** «D7: «решил почти»» */
+    cellErrors: string[];
     warnings: string[];
+    /** Блокирующие ошибки (дубль ученика) — применить нельзя */
+    errors: string[];
 };
 
 export type ApplyImportRequest = {
-    /** Ручные сопоставления нераспознанных строк; studentId null — пропустить */
-    mappings: { row: number; studentId: Guid | null }[];
-    confirmOtherLesson: boolean;
-    createTasks: boolean;
+    confirmLessonMismatch: boolean;
+    createMissingTasks: boolean;
     publish: boolean;
+    /** Ручные сопоставления нераспознанных строк; studentId null — пропустить */
+    rowMappings: { row: number; studentId: Guid | null }[];
 };
 
-export type ApplyImportResponse = {
-    lessonId: Guid;
-    applied: number;
+export type ImportResultDto = {
+    created: number;
+    updated: number;
+    unchanged: number;
+    published: boolean;
 };
 
 export type AddStudentRequest = {
@@ -341,28 +341,25 @@ export function groupTemplateUrl(groupId: Guid, tasks: number): string {
 
 export function importFileUrl(lessonId: Guid, uploadId: Guid): string {
     return apiUrl(
-        `/teacher/lessons/${lessonId}/gradebook/import/${uploadId}/file`,
+        `/teacher/lessons/${lessonId}/gradebook/imports/${uploadId}/file`,
     );
 }
 
-/** Куда грузить XLSX: в конкретное занятие или в группу (занятие по дате из файла). */
-export type ImportTarget =
-    { kind: "lesson"; lessonId: Guid } | { kind: "group"; groupId: Guid };
-
-function importBase(target: ImportTarget): string {
-    return target.kind === "lesson"
-        ? `/teacher/lessons/${target.lessonId}/gradebook/import`
-        : `/teacher/groups/${target.groupId}/gradebook/import`;
+export async function listImports(lessonId: Guid): Promise<ImportFileDto[]> {
+    const response = await api.get<ImportFileDto[]>(
+        `/teacher/lessons/${lessonId}/gradebook/imports`,
+    );
+    return response.data;
 }
 
 export async function previewImport(
-    target: ImportTarget,
+    lessonId: Guid,
     file: File,
 ): Promise<ImportPreviewDto> {
     const form = new FormData();
     form.append("file", file);
     const response = await api.post<ImportPreviewDto>(
-        importBase(target),
+        `/teacher/lessons/${lessonId}/gradebook/import`,
         form,
         { headers: { "Content-Type": "multipart/form-data" } },
     );
@@ -370,12 +367,12 @@ export async function previewImport(
 }
 
 export async function applyImport(
-    target: ImportTarget,
+    lessonId: Guid,
     uploadId: Guid,
     request: ApplyImportRequest,
-): Promise<ApplyImportResponse> {
-    const response = await api.post<ApplyImportResponse>(
-        `${importBase(target)}/${uploadId}/apply`,
+): Promise<ImportResultDto> {
+    const response = await api.post<ImportResultDto>(
+        `/teacher/lessons/${lessonId}/gradebook/import/${uploadId}/apply`,
         request,
     );
     return response.data;

@@ -1,4 +1,4 @@
-import { getCounters } from "$lib/api/admin";
+import { getPendingRequestCount } from "$lib/api/admin";
 import { requireRole } from "$lib/guards";
 
 export async function load({ parent, depends }) {
@@ -6,6 +6,6 @@ export async function load({ parent, depends }) {
     requireRole(me, "Admin");
     depends("admin:counters");
     // счётчики — подсказка в навигации, без них раздел работает
-    const counters = await getCounters().catch(() => null);
-    return { counters };
+    const pendingRequests = await getPendingRequestCount().catch(() => 0);
+    return { pendingRequests };
 }

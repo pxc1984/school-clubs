@@ -38,7 +38,7 @@
                             {request.childFirstName}
                         </span>
                         <span class="text-muted-foreground">
-                            · {request.groupTitle}
+                            · {request.group.title}
                         </span>
                         <RequestStatusBadge status={request.status} />
                     </li>
@@ -98,23 +98,33 @@
                                         <span class="font-medium">
                                             {group.title}
                                         </span>
-                                        {#if group.bucket}
+                                        {#if group.position}
                                             <Badge variant="secondary">
                                                 <TrophyIcon />
-                                                {BUCKET_LABELS[group.bucket]}
+                                                {BUCKET_LABELS[group.position]}
                                             </Badge>
                                         {/if}
                                     </div>
                                     {#if group.lastLesson}
                                         {@const lesson = group.lastLesson}
-                                        <p class="mt-1 text-2xl font-semibold">
-                                            {lesson.solved}
-                                            <span
-                                                class="text-base font-normal text-muted-foreground"
+                                        {#if lesson.attended}
+                                            <p
+                                                class="mt-1 text-2xl font-semibold"
                                             >
-                                                из {lesson.total} задач
-                                            </span>
-                                        </p>
+                                                {lesson.solved}
+                                                <span
+                                                    class="text-base font-normal text-muted-foreground"
+                                                >
+                                                    из {lesson.taskCount} задач
+                                                </span>
+                                            </p>
+                                        {:else}
+                                            <p
+                                                class="mt-1 text-base text-muted-foreground"
+                                            >
+                                                Не был на последнем занятии
+                                            </p>
+                                        {/if}
                                         <p
                                             class="text-sm text-muted-foreground"
                                         >
