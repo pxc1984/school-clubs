@@ -8,10 +8,12 @@ namespace SchoolClubs.Domain.Entities.Gradebook;
 /// <summary>
 /// Журнал занятия — агрегат над записями <see cref="GradebookEntry"/>.
 /// Гарантирует не более одной записи на пару (ученик, задача) и что задачи относятся к этому занятию.
+/// Хранит и посещаемость: «не был» / «опоздал» — не более одной отметки на ученика.
 /// </summary>
 public class LessonGradebook : IAuditableEntity
 {
     private readonly List<GradebookEntry> _gradebookEntries = [];
+    private readonly List<LessonAttendance> _attendance = [];
 
     public LessonGradebook(Lesson lesson, DataEntry? dataEntry = null)
     {
@@ -46,6 +48,12 @@ public class LessonGradebook : IAuditableEntity
     public IReadOnlyCollection<GradebookEntry> GradebookEntries
     {
         get { return _gradebookEntries; }
+    }
+
+    /// <summary>Только отклонения от обычного присутствия.</summary>
+    public IReadOnlyCollection<LessonAttendance> Attendance
+    {
+        get { return _attendance; }
     }
 
     public DateTimeOffset Created { get; set; }
@@ -109,9 +117,41 @@ public class LessonGradebook : IAuditableEntity
         return true;
     }
 
+    /// <summary>Ставит или меняет отметку посещаемости ученика.</summary>
+    /// <remarks>Отметки по задачам не трогает: опоздавший мог что-то решить.</remarks>
+    public LessonAttendance SetAttendance(Student student, AttendanceStatus status)
+    {
+        ArgumentNullException.ThrowIfNull(student);
+
+        var attendance = FindAttendance(student.Id);
+        if (attendance != null)
+        {
+            attendance.ChangeStatus(status);
+            return attendance;
+        }
+
+        attendance = new LessonAttendance(LessonId, student, status);
+        _attendance.Add(attendance);
+        return attendance;
+    }
+
+    /// <summary>Снимает отметку посещаемости — ученик был вовремя.</summary>
+    /// <returns><c>false</c>, если отметки не было.</returns>
+    public bool RemoveAttendance(Guid studentId)
+    {
+        var attendance = FindAttendance(studentId);
+        return attendance != null && _attendance.Remove(attendance);
+    }
+
+    public LessonAttendance? FindAttendance(Guid studentId)
+    {
+        return _attendance.FirstOrDefault(a => a.StudentId == studentId);
+    }
+
     /// <summary>
     /// Переносит отметки дубля <paramref name="from"/> на <paramref name="to"/> (слияние учеников).
     /// Если у <paramref name="to"/> уже есть отметка по той же задаче, остаётся она.
+    /// Посещаемость переносится так же: приоритет у отметки <paramref name="to"/>.
     /// </summary>
     /// <returns>Сколько отметок перенесено.</returns>
     public int MoveEntries(Student from, Student to)
@@ -130,6 +170,13 @@ public class LessonGradebook : IAuditableEntity
 
             SetEntry(to, entry.Task, entry.Status, entry.Comment);
             moved++;
+        }
+
+        if (FindAttendance(from.Id) is { } attendance)
+        {
+            RemoveAttendance(from.Id);
+            if (FindAttendance(to.Id) == null)
+                SetAttendance(to, attendance.Status);
         }
 
         return moved;

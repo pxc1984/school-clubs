@@ -107,7 +107,7 @@ public class ParentDashboardEndpointTests : TestBase
         group.LessonsTotal.ShouldBe(4);
         group.Position.ShouldBe(GroupPosition.Top10);
         // Черновик не виден: последнее — пропущенное четвёртое занятие.
-        group.LastLesson.ShouldBe(new LastLessonDto(_lessons[3].Id, _lessons[3].Date, "Тема 4", false, 0, 2, 0));
+        group.LastLesson.ShouldBe(new LastLessonDto(_lessons[3].Id, _lessons[3].Date, "Тема 4", false, null, 0, 2, 0));
     }
 
     [Test]

@@ -15,12 +15,14 @@ public class GroupStatisticsTests
 
     private readonly List<PublishedLessonRow> _lessons = [];
     private readonly List<MarkRow> _marks = [];
+    private readonly List<AttendanceRow> _attendance = [];
 
     [SetUp]
     public void Reset()
     {
         _lessons.Clear();
         _marks.Clear();
+        _attendance.Clear();
     }
 
     private PublishedLessonRow AddLesson(int day, int tasks)
@@ -39,7 +41,7 @@ public class GroupStatisticsTests
 
     private GroupStatistics Compute()
     {
-        return GroupStatistics.Compute(new GroupPeriodData(_lessons, _marks), Weights);
+        return GroupStatistics.Compute(new GroupPeriodData(_lessons, _marks, _attendance), Weights);
     }
 
     private static List<Guid> Students(int count)
@@ -220,6 +222,28 @@ public class GroupStatisticsTests
     }
 
     [Test]
+    public void Attendance_AbsentExcludesMarks_LateCountsAsAttended()
+    {
+        var lesson = AddLesson(1, 2);
+        var (absent, late, lateWithoutMarks) = (Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        Mark(absent, lesson, Solved, Solved);
+        Mark(late, lesson, Solved);
+        _attendance.Add(new AttendanceRow(absent, lesson.Id, AttendanceStatus.Absent));
+        _attendance.Add(new AttendanceRow(late, lesson.Id, AttendanceStatus.Late));
+        _attendance.Add(new AttendanceRow(lateWithoutMarks, lesson.Id, AttendanceStatus.Late));
+
+        var stats = Compute().Lessons.ShouldHaveSingleItem();
+
+        stats.ResultOf(absent).ShouldBeNull();
+        stats.AttendanceOf(absent).ShouldBe(AttendanceStatus.Absent);
+        stats.ResultOf(late)!.Score.ShouldBe(0.5);
+        stats.AttendanceOf(late).ShouldBe(AttendanceStatus.Late);
+        stats.ResultOf(lateWithoutMarks)!.Solved.ShouldBe(0);
+        stats.AttendanceOf(Guid.NewGuid()).ShouldBeNull();
+        stats.TaskSolvedBy(lesson.Tasks[0].Id).ShouldBeNull();
+    }
+
+    [Test]
     public void Weights_AreConfigurable()
     {
         var lesson = AddLesson(1, 2);
@@ -227,7 +251,7 @@ public class GroupStatisticsTests
         Mark(child, lesson, SolvedWithRemarks, UnsolvedWithRemarks);
         var strict = new StatisticsWeights { SolvedWithRemarks = 0.5, UnsolvedWithRemarks = 0 };
 
-        GroupStatistics.Compute(new GroupPeriodData(_lessons, _marks), strict).Lessons[0].ResultOf(child)!.Score
+        GroupStatistics.Compute(new GroupPeriodData(_lessons, _marks, _attendance), strict).Lessons[0].ResultOf(child)!.Score
             .ShouldBe(0.25);
     }
 

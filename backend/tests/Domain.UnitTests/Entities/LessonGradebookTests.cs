@@ -89,6 +89,27 @@ public class LessonGradebookTests
     }
 
     [Test]
+    public void MoveEntries_MovesAttendance_KeepsTargetOnConflict()
+    {
+        var gradebook = new LessonGradebook(NewLesson());
+        var duplicate = new Student("Пётр");
+        var original = new Student("Пётр");
+        var otherDuplicate = new Student("Анна");
+        var otherOriginal = new Student("Анна");
+        gradebook.SetAttendance(duplicate, AttendanceStatus.Late);
+        gradebook.SetAttendance(otherDuplicate, AttendanceStatus.Late);
+        gradebook.SetAttendance(otherOriginal, AttendanceStatus.Absent);
+
+        gradebook.MoveEntries(duplicate, original);
+        gradebook.MoveEntries(otherDuplicate, otherOriginal);
+
+        gradebook.FindAttendance(duplicate.Id).ShouldBeNull();
+        gradebook.FindAttendance(original.Id)!.Status.ShouldBe(AttendanceStatus.Late);
+        gradebook.FindAttendance(otherOriginal.Id)!.Status.ShouldBe(AttendanceStatus.Absent);
+        gradebook.Attendance.Count.ShouldBe(2);
+    }
+
+    [Test]
     public void MoveEntries_ToSameStudent_Throws()
     {
         var gradebook = new LessonGradebook(NewLesson());
@@ -152,5 +173,44 @@ public class LessonGradebookTests
         gradebook.MoveEntries(duplicate, original);
 
         gradebook.FindEntry(original.Id, task.Id)!.Comment.ShouldBe("почти");
+    }
+
+    [Test]
+    public void SetAttendance_Twice_UpdatesAndKeepsEntries()
+    {
+        var lesson = NewLesson();
+        var task = lesson.AddTask();
+        var student = new Student("Пётр");
+        var gradebook = new LessonGradebook(lesson);
+        gradebook.SetEntry(student, task, GradebookEntryTaskStatus.Solved);
+
+        gradebook.SetAttendance(student, AttendanceStatus.Absent);
+        var attendance = gradebook.SetAttendance(student, AttendanceStatus.Late);
+
+        gradebook.Attendance.ShouldHaveSingleItem().ShouldBeSameAs(attendance);
+        attendance.Status.ShouldBe(AttendanceStatus.Late);
+        attendance.LessonId.ShouldBe(lesson.Id);
+        gradebook.GradebookEntries.ShouldHaveSingleItem();
+    }
+
+    [Test]
+    public void RemoveAttendance_ReturnsWhetherRemoved()
+    {
+        var student = new Student("Пётр");
+        var gradebook = new LessonGradebook(NewLesson());
+        gradebook.SetAttendance(student, AttendanceStatus.Absent);
+
+        gradebook.RemoveAttendance(student.Id).ShouldBeTrue();
+        gradebook.RemoveAttendance(student.Id).ShouldBeFalse();
+        gradebook.Attendance.ShouldBeEmpty();
+    }
+
+    [Test]
+    public void SetAttendance_WithUnknownStatus_Throws()
+    {
+        var gradebook = new LessonGradebook(NewLesson());
+
+        Should.Throw<ArgumentOutOfRangeException>(
+            () => gradebook.SetAttendance(new Student("Пётр"), (AttendanceStatus)42));
     }
 }

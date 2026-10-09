@@ -43,19 +43,25 @@ public record StudentPeriodResult(int LessonsAttended, int Solved, double Weight
 public class LessonStatistics
 {
     private readonly Dictionary<Guid, int> _solvedByTask;
+    private readonly Dictionary<Guid, AttendanceStatus> _attendance;
 
     internal LessonStatistics(PublishedLessonRow lesson,
         Dictionary<Guid, StudentLessonResult> results,
-        Dictionary<Guid, int> solvedByTask)
+        Dictionary<Guid, int> solvedByTask,
+        Dictionary<Guid, AttendanceStatus> attendance)
     {
         Lesson = lesson;
         Results = results;
         _solvedByTask = solvedByTask;
+        _attendance = attendance;
     }
 
     public PublishedLessonRow Lesson { get; }
 
-    /// <summary>Только посетившие: ученик посетил занятие, если у него есть хотя бы одна отметка.</summary>
+    /// <summary>
+    /// Только посетившие: у ученика есть хотя бы одна отметка или он отмечен «опоздал».
+    /// Отметка «не был» исключает ученика, даже если отметки по задачам остались.
+    /// </summary>
     public IReadOnlyDictionary<Guid, StudentLessonResult> Results { get; }
 
     public int TaskCount
@@ -66,6 +72,12 @@ public class LessonStatistics
     public StudentLessonResult? ResultOf(Guid studentId)
     {
         return Results.GetValueOrDefault(studentId);
+    }
+
+    /// <summary><c>null</c> — особых отметок нет (был вовремя или не отмечен).</summary>
+    public AttendanceStatus? AttendanceOf(Guid studentId)
+    {
+        return _attendance.TryGetValue(studentId, out var status) ? status : null;
     }
 
     /// <summary>Среднее число решённых задач; только при ≥ 3 посетивших кроме самого ученика.</summary>
@@ -119,6 +131,7 @@ public class LessonStatistics
 /// <summary>
 /// Статистика группы за период — чистая функция от опубликованных занятий и отметок.
 /// Пропуск занятия не считается нулём: в балл идут только посещённые занятия.
+/// Опоздавший посетил занятие; его неотмеченные задачи считаются нерешёнными.
 /// </summary>
 public class GroupStatistics
 {
@@ -145,6 +158,7 @@ public class GroupStatistics
         ArgumentNullException.ThrowIfNull(weights);
 
         var marksByLesson = data.Marks.ToLookup(m => m.LessonId);
+        var attendanceByLesson = data.Attendance.ToLookup(a => a.LessonId);
         var lessons = new List<LessonStatistics>();
         foreach (var lesson in data.Lessons
                      .Where(l => l.Tasks.Count > 0)
@@ -152,18 +166,28 @@ public class GroupStatistics
                      .ThenBy(l => l.Time))
         {
             var taskIds = lesson.Tasks.Select(t => t.Id).ToHashSet();
-            var marks = marksByLesson[lesson.Id].Where(m => taskIds.Contains(m.TaskId)).ToList();
+            var attendance = attendanceByLesson[lesson.Id].ToDictionary(a => a.StudentId, a => a.Status);
+            var marks = marksByLesson[lesson.Id]
+                .Where(m => taskIds.Contains(m.TaskId))
+                .Where(m => attendance.GetValueOrDefault(m.StudentId, AttendanceStatus.Late) != AttendanceStatus.Absent)
+                .ToList();
             var results = marks
                 .GroupBy(m => m.StudentId)
                 .ToDictionary(g => g.Key, g => new StudentLessonResult(
                     g.Count(m => IsSolved(m.Status)),
                     g.Sum(m => weights.Of(m.Status)),
                     lesson.Tasks.Count));
+            foreach (var (studentId, status) in attendance)
+            {
+                if (status == AttendanceStatus.Late)
+                    results.TryAdd(studentId, new StudentLessonResult(0, 0, lesson.Tasks.Count));
+            }
+
             var solvedByTask = marks
                 .Where(m => IsSolved(m.Status))
                 .GroupBy(m => m.TaskId)
                 .ToDictionary(g => g.Key, g => g.Count());
-            lessons.Add(new LessonStatistics(lesson, results, solvedByTask));
+            lessons.Add(new LessonStatistics(lesson, results, solvedByTask, attendance));
         }
 
         return new GroupStatistics(lessons);

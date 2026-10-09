@@ -1,5 +1,6 @@
 import { api, apiUrl } from "$lib/api/client";
 import type {
+    AttendanceStatus,
     DateOnly,
     DateTimeString,
     GradebookEntryTaskStatus,
@@ -54,13 +55,15 @@ export type SummaryLessonDto = {
 /** inGroup false — выбывший ученик, у которого остались отметки */
 export type SummaryStudentDto = StudentDto & { inGroup: boolean };
 
-/** Ячейка есть, только если у ученика есть отметки на занятии */
+/** Ячейка есть, только если у ученика есть отметки или посещаемость на занятии */
 export type SummaryCellDto = {
     studentId: Guid;
     lessonId: Guid;
     marked: number;
     /** Решено, в том числе с замечаниями */
     solved: number;
+    /** «Не был» / «опоздал»; null — отметки посещаемости нет */
+    attendance: AttendanceStatus | null;
 };
 
 export type GroupMatrixDto = {
@@ -112,6 +115,12 @@ export type GradebookCellDto = {
     comment: string | null;
 };
 
+/** Отметка посещаемости; ученики без неё были вовремя */
+export type GradebookAttendanceDto = {
+    studentId: Guid;
+    status: AttendanceStatus;
+};
+
 export type GradebookDto = {
     lessonId: Guid;
     date: DateOnly;
@@ -120,6 +129,7 @@ export type GradebookDto = {
     tasks: TaskDto[];
     students: GradebookStudentDto[];
     entries: GradebookCellDto[];
+    attendance: GradebookAttendanceDto[];
 };
 
 export type GradebookCellChange = {
@@ -131,8 +141,16 @@ export type GradebookCellChange = {
     comment: string | null;
 };
 
+export type GradebookAttendanceChange = {
+    studentId: Guid;
+    /** null — был вовремя (снять отметку) */
+    status: AttendanceStatus | null;
+};
+
 export type SaveGradebookRequest = {
     changes: GradebookCellChange[];
+    /** null — посещаемость без изменений */
+    attendance?: GradebookAttendanceChange[] | null;
 };
 
 // --- импорт XLSX
@@ -323,10 +341,11 @@ export async function getGradebook(lessonId: Guid): Promise<GradebookDto> {
 export async function saveGradebook(
     lessonId: Guid,
     changes: GradebookCellChange[],
+    attendance: GradebookAttendanceChange[] = [],
 ): Promise<GradebookDto> {
     const response = await api.put<GradebookDto>(
         `/teacher/lessons/${lessonId}/gradebook`,
-        { changes } satisfies SaveGradebookRequest,
+        { changes, attendance } satisfies SaveGradebookRequest,
     );
     return response.data;
 }

@@ -1,4 +1,5 @@
 using SchoolClubs.Application.Services.Common;
+using SchoolClubs.Domain.Entities.Gradebook;
 
 namespace SchoolClubs.Application.Services.TeacherGroups;
 
@@ -12,7 +13,10 @@ public record TeacherGroupCardDto(
     DateOnly? NextLessonDate,
     int UnfilledLessonCount);
 
-/// <param name="FilledPercent">Доля заполненных ячеек «ученик × задача» для текущего состава, 0–100.</param>
+/// <param name="FilledPercent">
+/// Доля заполненных ячеек «ученик × задача» для текущего состава, 0–100;
+/// строка ученика с отметкой «не был» / «опоздал» засчитывается целиком.
+/// </param>
 public record LessonSummaryDto(
     Guid Id,
     DateOnly Date,
@@ -41,10 +45,16 @@ public record SummaryStudentDto(
     string? Grade,
     bool InGroup);
 
-/// <summary>Ячейка матрицы есть, только если у ученика есть отметки на занятии.</summary>
+/// <summary>Ячейка матрицы есть, только если у ученика есть отметки или посещаемость на занятии.</summary>
 /// <param name="Marked">Сколько задач отмечено.</param>
 /// <param name="Solved">Сколько из них решено (в том числе с замечаниями).</param>
-public record SummaryCellDto(Guid StudentId, Guid LessonId, int Marked, int Solved);
+/// <param name="Attendance">«Не был» / «опоздал»; <c>null</c> — отметки посещаемости нет.</param>
+public record SummaryCellDto(
+    Guid StudentId,
+    Guid LessonId,
+    int Marked,
+    int Solved,
+    AttendanceStatus? Attendance = null);
 
 /// <summary>Матрица «ученики × занятия» группы.</summary>
 public record GroupMatrixDto(

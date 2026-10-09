@@ -8,19 +8,24 @@
     import { beforeNavigate } from "$app/navigation";
     import CheckIcon from "@lucide/svelte/icons/check";
     import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
+    import ClockIcon from "@lucide/svelte/icons/clock";
     import EllipsisVerticalIcon from "@lucide/svelte/icons/ellipsis-vertical";
     import MessageSquareIcon from "@lucide/svelte/icons/message-square";
     import PencilIcon from "@lucide/svelte/icons/pencil";
     import PlusIcon from "@lucide/svelte/icons/plus";
     import Trash2Icon from "@lucide/svelte/icons/trash-2";
+    import UserCheckIcon from "@lucide/svelte/icons/user-check";
     import UserXIcon from "@lucide/svelte/icons/user-x";
     import { errorMessage } from "$lib/api/client";
     import {
         saveGradebook,
+        type GradebookAttendanceChange,
+        type GradebookAttendanceDto,
         type GradebookCellChange,
         type GradebookCellDto,
     } from "$lib/api/teacher";
     import type {
+        AttendanceStatus,
         GradebookEntryTaskStatus,
         StudentDto,
         TaskDto,
@@ -46,6 +51,7 @@
         students,
         tasks,
         entries,
+        attendance = [],
         saveState = $bindable("saved"),
         onAddTask,
         onRenameTask,
@@ -55,6 +61,7 @@
         students: GridStudent[];
         tasks: TaskDto[];
         entries: GradebookCellDto[];
+        attendance?: GradebookAttendanceDto[];
         saveState?: SaveState;
         onAddTask?: () => void;
         onRenameTask?: (task: TaskDto) => void;
@@ -75,10 +82,30 @@
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const dirty = new Map<string, Cell | null>();
 
+    /** Посещаемость по studentId: нет записи — был вовремя */
+    const attendanceOf = new SvelteMap<string, AttendanceStatus>();
+    /** Несохранённая посещаемость: null — снять отметку */
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
+    const dirtyAttendance = new Map<string, AttendanceStatus | null>();
+
+    const ATTENDANCE_LABELS: Record<AttendanceStatus, string> = {
+        Absent: "не был",
+        Late: "опоздал",
+    };
+
     // При перезагрузке данных (добавили задачу, импорт) не теряем свои правки
     $effect.pre(() => {
         const fresh = entries;
+        const freshAttendance = attendance;
         untrack(() => {
+            attendanceOf.clear();
+            for (const mark of freshAttendance) {
+                attendanceOf.set(mark.studentId, mark.status);
+            }
+            for (const [studentId, status] of dirtyAttendance) {
+                if (status) attendanceOf.set(studentId, status);
+                else attendanceOf.delete(studentId);
+            }
             cells.clear();
             for (const entry of fresh) {
                 cells.set(key(entry.studentId, entry.taskId), {
@@ -96,24 +123,47 @@
     let timer: ReturnType<typeof setTimeout> | undefined;
     let inFlight: Promise<void> | null = null;
 
+    function scheduleSave() {
+        saveState = "dirty";
+        clearTimeout(timer);
+        timer = setTimeout(() => void flush(), DEBOUNCE_MS);
+    }
+
     function setCell(studentId: string, taskId: string, value: Cell | null) {
         const cellKey = key(studentId, taskId);
         if (value) cells.set(cellKey, value);
         else cells.delete(cellKey);
         dirty.set(cellKey, value);
-        saveState = "dirty";
-        clearTimeout(timer);
-        timer = setTimeout(() => void flush(), DEBOUNCE_MS);
+        // отметка по задаче — значит, ученик всё-таки был
+        if (value && attendanceOf.get(studentId) === "Absent")
+            setAttendance(studentId, null);
+        scheduleSave();
+    }
+
+    function setAttendance(
+        studentId: string,
+        status: AttendanceStatus | null,
+    ) {
+        if (status) attendanceOf.set(studentId, status);
+        else attendanceOf.delete(studentId);
+        dirtyAttendance.set(studentId, status);
+        scheduleSave();
+    }
+
+    function hasDirty(): boolean {
+        return dirty.size > 0 || dirtyAttendance.size > 0;
     }
 
     /** Отправить все несохранённые изменения одним PUT. */
     export async function flush(): Promise<void> {
         clearTimeout(timer);
         if (inFlight) await inFlight;
-        if (!dirty.size) return;
+        if (!hasDirty()) return;
 
         const batch = new Map(dirty);
         dirty.clear();
+        const attendanceBatch = new Map(dirtyAttendance);
+        dirtyAttendance.clear();
         const changes: GradebookCellChange[] = [...batch].map(
             ([cellKey, value]) => {
                 const [studentId, taskId] = cellKey.split(":");
@@ -125,16 +175,23 @@
                 };
             },
         );
+        const attendanceChanges: GradebookAttendanceChange[] = [
+            ...attendanceBatch,
+        ].map(([studentId, status]) => ({ studentId, status }));
 
         saveState = "saving";
-        inFlight = saveGradebook(lessonId, changes)
+        inFlight = saveGradebook(lessonId, changes, attendanceChanges)
             .then(() => {
-                saveState = dirty.size ? "dirty" : "saved";
+                saveState = hasDirty() ? "dirty" : "saved";
             })
             .catch((error) => {
                 // вернуть в очередь то, что не перезаписали за время запроса
                 for (const [cellKey, value] of batch) {
                     if (!dirty.has(cellKey)) dirty.set(cellKey, value);
+                }
+                for (const [studentId, status] of attendanceBatch) {
+                    if (!dirtyAttendance.has(studentId))
+                        dirtyAttendance.set(studentId, status);
                 }
                 saveState = "error";
                 saveError = errorMessage(error);
@@ -149,7 +206,7 @@
     let saveError = $state<string | null>(null);
 
     export function hasPendingChanges(): boolean {
-        return dirty.size > 0 || inFlight !== null;
+        return hasDirty() || inFlight !== null;
     }
 
     function rowMarks(studentId: string): number {
@@ -157,12 +214,18 @@
             .length;
     }
 
-    /** Строки, где часть задач отмечена, а часть нет */
+    /**
+     * Часть задач отмечена, а часть нет. У опоздавших и не бывших
+     * пропуски ожидаемы — такая строка не считается недозаполненной.
+     */
+    function isIncomplete(studentId: string): boolean {
+        if (attendanceOf.has(studentId)) return false;
+        const marks = rowMarks(studentId);
+        return marks > 0 && marks < tasks.length;
+    }
+
     export function incompleteRows(): number {
-        return students.filter((student) => {
-            const marks = rowMarks(student.id);
-            return marks > 0 && marks < tasks.length;
-        }).length;
+        return students.filter((student) => isIncomplete(student.id)).length;
     }
 
     function taskMarks(taskId: string): number {
@@ -490,6 +553,7 @@
             <tbody>
                 {#each students as student, row (student.id)}
                     {@const marks = rowMarks(student.id)}
+                    {@const presence = attendanceOf.get(student.id)}
                     <tr class="group">
                         <th
                             scope="row"
@@ -506,8 +570,20 @@
                                             (выбыл)
                                         </span>
                                     {/if}
+                                    {#if presence}
+                                        <span
+                                            class={cn(
+                                                "rounded px-1 text-xs",
+                                                presence === "Absent"
+                                                    ? "bg-muted text-muted-foreground"
+                                                    : "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+                                            )}
+                                        >
+                                            {ATTENDANCE_LABELS[presence]}
+                                        </span>
+                                    {/if}
                                 </span>
-                                {#if marks > 0 && marks < tasks.length}
+                                {#if isIncomplete(student.id)}
                                     <span
                                         class="size-1.5 shrink-0 rounded-full bg-amber-500"
                                         title="Строка заполнена не полностью"
@@ -536,14 +612,48 @@
                                             <CheckIcon />
                                             Решил все задачи
                                         </DropdownMenu.Item>
+                                        <DropdownMenu.Separator />
+                                        <!-- выбывшему посещаемость не ставится, только очистка строки -->
                                         <DropdownMenu.Item
-                                            disabled={marks === 0}
+                                            disabled={presence === "Late" ||
+                                                student.inGroup === false}
                                             onSelect={() =>
-                                                clearRow(student.id)}
+                                                setAttendance(
+                                                    student.id,
+                                                    "Late",
+                                                )}
+                                        >
+                                            <ClockIcon />
+                                            Опоздал
+                                        </DropdownMenu.Item>
+                                        <DropdownMenu.Item
+                                            disabled={marks === 0 &&
+                                                (presence === "Absent" ||
+                                                    student.inGroup === false)}
+                                            onSelect={() => {
+                                                if (student.inGroup !== false)
+                                                    setAttendance(
+                                                        student.id,
+                                                        "Absent",
+                                                    );
+                                                clearRow(student.id);
+                                            }}
                                         >
                                             <UserXIcon />
                                             Не был (очистить строку)
                                         </DropdownMenu.Item>
+                                        {#if presence}
+                                            <DropdownMenu.Item
+                                                onSelect={() =>
+                                                    setAttendance(
+                                                        student.id,
+                                                        null,
+                                                    )}
+                                            >
+                                                <UserCheckIcon />
+                                                Был вовремя
+                                            </DropdownMenu.Item>
+                                        {/if}
                                     </DropdownMenu.Content>
                                 </DropdownMenu.Root>
                             </div>
@@ -627,7 +737,8 @@
     <p class="text-xs text-muted-foreground">
         Клик по ячейке перебирает отметки. С клавиатуры: стрелки — переход, 1–4
         — отметка и сдвиг вправо, 0 или Del — очистить, C — комментарий.
-        Изменения сохраняются автоматически.
+        «Опоздал» и «Не был» — в меню ученика: такие строки не считаются
+        заполненными частично. Изменения сохраняются автоматически.
     </p>
 
     {#if saveState === "error"}

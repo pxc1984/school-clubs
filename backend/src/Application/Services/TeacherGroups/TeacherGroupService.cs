@@ -65,9 +65,15 @@ public class TeacherGroupService(
             .ToDictionary(g => g.LessonId);
 
         var cells = groupGradebooks.Values
-            .SelectMany(g => g.GradebookEntries)
-            .GroupBy(e => (e.StudentId, e.LessonId))
-            .Select(c => new SummaryCellDto(c.Key.StudentId, c.Key.LessonId, c.Count(), c.Count(e => e.IsSolved)))
+            .SelectMany(g => g.GradebookEntries.Select(e => e.StudentId)
+                .Concat(g.Attendance.Select(a => a.StudentId))
+                .Distinct()
+                .Select(studentId =>
+                {
+                    var entries = g.EntriesOf(studentId);
+                    return new SummaryCellDto(studentId, g.LessonId, entries.Count, entries.Count(e => e.IsSolved),
+                        g.FindAttendance(studentId)?.Status);
+                }))
             .ToList();
 
         // В матрице и текущий состав, и выбывшие ученики с отметками.
@@ -155,7 +161,12 @@ public class TeacherGroupService(
             {
                 var gradebook = groupGradebooks.GetValueOrDefault(l.Id);
                 var cells = l.Tasks.Count * group.Students.Count;
-                var filled = gradebook?.GradebookEntries.Count(e => group.HasStudent(e.StudentId)) ?? 0;
+                // У отмеченных «не был» / «опоздал» пустые ячейки ожидаемы — строка считается заполненной.
+                var filled = gradebook is null
+                    ? 0
+                    : group.Students.Sum(s => gradebook.FindAttendance(s.Id) != null
+                        ? l.Tasks.Count
+                        : gradebook.EntriesOf(s.Id).Count);
                 var percent = cells == 0 ? 0 : Math.Min(100, filled * 100 / cells);
                 return new LessonSummaryDto(l.Id, l.Date, l.Time, l.Topic, l.Tasks.Count, percent,
                     gradebook?.IsPublished == true);

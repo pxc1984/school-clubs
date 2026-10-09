@@ -273,6 +273,7 @@
         students={gradebook.students}
         tasks={gradebook.tasks}
         entries={gradebook.entries}
+        attendance={gradebook.attendance}
         {onAddTask}
         onRenameTask={(task) => {
             renaming = task;

@@ -16,7 +16,13 @@ public record LessonTaskRow(Guid Id, long Order, string? Title);
 /// <summary>Отметка без замечания: для агрегатов по группе комментарии не нужны.</summary>
 public record MarkRow(Guid StudentId, Guid LessonId, Guid TaskId, GradebookEntryTaskStatus Status);
 
-public record GroupPeriodData(IReadOnlyList<PublishedLessonRow> Lessons, IReadOnlyList<MarkRow> Marks);
+/// <summary>Отметка «не был» / «опоздал»; у остальных учеников её нет.</summary>
+public record AttendanceRow(Guid StudentId, Guid LessonId, AttendanceStatus Status);
+
+public record GroupPeriodData(
+    IReadOnlyList<PublishedLessonRow> Lessons,
+    IReadOnlyList<MarkRow> Marks,
+    IReadOnlyList<AttendanceRow> Attendance);
 
 /// <summary>
 /// Сырые данные для статистики родителя. Учитываются только опубликованные журналы;
@@ -24,10 +30,12 @@ public record GroupPeriodData(IReadOnlyList<PublishedLessonRow> Lessons, IReadOn
 /// </summary>
 public interface IStudentStatisticsQuery
 {
-    /// <summary>Группы ученика: где он сейчас состоит или имеет отметки в опубликованных журналах.</summary>
+    /// <summary>
+    /// Группы ученика: где он сейчас состоит или имеет отметки (в том числе посещаемость) в опубликованных журналах.
+    /// </summary>
     Task<IReadOnlyList<GroupRefDto>> ListGroupsAsync(Guid studentId, CancellationToken cancellationToken = default);
 
-    /// <summary>Опубликованные занятия группы за период (границы включительно) и все отметки на них.</summary>
+    /// <summary>Опубликованные занятия группы за период (границы включительно), все отметки и посещаемость.</summary>
     Task<GroupPeriodData> LoadAsync(Guid groupId,
         DateOnly? from,
         DateOnly? to,

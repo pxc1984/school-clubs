@@ -17,9 +17,17 @@ public class StudentStatisticsQuery(DbContext dbContext) : IStudentStatisticsQue
         var groupsWithMarks = dbContext.Set<GradebookEntry>()
             .Where(e => e.StudentId == studentId && publishedLessonIds.Contains(e.LessonId))
             .Select(e => e.Lesson.ParentGroupId);
+        var lessonsWithAttendance = dbContext.Set<LessonAttendance>()
+            .Where(a => a.StudentId == studentId && publishedLessonIds.Contains(a.LessonId))
+            .Select(a => a.LessonId);
+        var groupsWithAttendance = dbContext.Set<Lesson>()
+            .Where(l => lessonsWithAttendance.Contains(l.Id))
+            .Select(l => l.ParentGroupId);
 
         return await dbContext.Set<Group>()
-            .Where(g => g.Students.Any(s => s.Id == studentId) || groupsWithMarks.Contains(g.Id))
+            .Where(g => g.Students.Any(s => s.Id == studentId)
+                        || groupsWithMarks.Contains(g.Id)
+                        || groupsWithAttendance.Contains(g.Id))
             .OrderBy(g => g.IsArchived)
             .ThenBy(g => g.Title)
             .Select(g => new GroupRefDto(g.Id, g.Title, g.IsArchived))
@@ -55,8 +63,12 @@ public class StudentStatisticsQuery(DbContext dbContext) : IStudentStatisticsQue
             .Where(e => lessonIds.Contains(e.LessonId))
             .Select(e => new MarkRow(e.StudentId, e.LessonId, e.TaskId, e.Status))
             .ToListAsync(cancellationToken);
+        var attendance = await dbContext.Set<LessonAttendance>()
+            .Where(a => lessonIds.Contains(a.LessonId))
+            .Select(a => new AttendanceRow(a.StudentId, a.LessonId, a.Status))
+            .ToListAsync(cancellationToken);
 
-        return new GroupPeriodData(lessonRows, marks);
+        return new GroupPeriodData(lessonRows, marks, attendance);
     }
 
     public async Task<IReadOnlyDictionary<Guid, string>> GetCommentsAsync(Guid studentId,

@@ -266,4 +266,58 @@ public class TeacherEndpointTests : TestBase
         matrix.Cells.ShouldContain(new SummaryCellDto(_bob.Id, filled.Id, 1, 0));
         matrix.Cells.Count.ShouldBe(3);
     }
+
+    [Test]
+    public async Task Attendance_SaveClear_CountsRowAsFilled()
+    {
+        var lesson = await CreateLessonAsync(Today());
+        var task1 = lesson.Tasks[0].Id;
+
+        // Алиса опоздала и решила одну задачу из двух, Бориса не было.
+        var saved = await (await _teacher.PutAsJsonAsync($"{Teacher}/lessons/{lesson.Id}/gradebook",
+                new SaveGradebookRequest(
+                    [new GradebookCellChange(_alice.Id, task1, GradebookEntryTaskStatus.Solved, null)],
+                    [
+                        new GradebookAttendanceChange(_alice.Id, AttendanceStatus.Late),
+                        new GradebookAttendanceChange(_bob.Id, AttendanceStatus.Absent),
+                    ])))
+            .Content.ReadFromJsonAsync<GradebookDto>();
+        saved!.Attendance.ShouldBe([
+            new GradebookAttendanceDto(_alice.Id, AttendanceStatus.Late),
+            new GradebookAttendanceDto(_bob.Id, AttendanceStatus.Absent),
+        ], ignoreOrder: true);
+        (await _teacher.GetStringAsync($"{Teacher}/lessons/{lesson.Id}/gradebook")).ShouldContain("\"Absent\"");
+
+        var summary = (await _teacher.GetFromJsonAsync<List<LessonSummaryDto>>(
+            $"{Teacher}/groups/{_group.Id}/lessons"))!.ShouldHaveSingleItem();
+        summary.FilledPercent.ShouldBe(100);
+        (await _teacher.GetFromJsonAsync<List<TeacherGroupCardDto>>($"{Teacher}/groups"))
+            .ShouldHaveSingleItem().UnfilledLessonCount.ShouldBe(0);
+
+        // В сводной матрице ячейка есть и у не бывшего без отметок — для «н».
+        var matrix = await _teacher.GetFromJsonAsync<GroupMatrixDto>($"{Teacher}/groups/{_group.Id}/summary");
+        matrix!.Cells.ShouldBe([
+            new SummaryCellDto(_alice.Id, lesson.Id, 1, 1, AttendanceStatus.Late),
+            new SummaryCellDto(_bob.Id, lesson.Id, 0, 0, AttendanceStatus.Absent),
+        ], ignoreOrder: true);
+
+        // Снятая отметка возвращает Алисе «заполнено наполовину»; ячейки остаются.
+        var cleared = await (await _teacher.PutAsJsonAsync($"{Teacher}/lessons/{lesson.Id}/gradebook",
+                new SaveGradebookRequest([], [new GradebookAttendanceChange(_alice.Id, null)])))
+            .Content.ReadFromJsonAsync<GradebookDto>();
+        cleared!.Attendance.ShouldHaveSingleItem().StudentId.ShouldBe(_bob.Id);
+        cleared.Entries.ShouldHaveSingleItem().TaskId.ShouldBe(task1);
+        (await _teacher.GetFromJsonAsync<List<LessonSummaryDto>>($"{Teacher}/groups/{_group.Id}/lessons"))!
+            .ShouldHaveSingleItem().FilledPercent.ShouldBe(75);
+
+        (await _teacher.PutAsJsonAsync($"{Teacher}/lessons/{lesson.Id}/gradebook",
+                new SaveGradebookRequest([], [new GradebookAttendanceChange(Guid.NewGuid(), AttendanceStatus.Late)])))
+            .StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await _teacher.PutAsJsonAsync($"{Teacher}/lessons/{lesson.Id}/gradebook",
+                new SaveGradebookRequest([], [
+                    new GradebookAttendanceChange(_bob.Id, AttendanceStatus.Late),
+                    new GradebookAttendanceChange(_bob.Id, null),
+                ])))
+            .StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
 }

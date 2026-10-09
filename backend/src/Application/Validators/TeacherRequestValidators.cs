@@ -46,5 +46,11 @@ public class SaveGradebookRequestValidator : AbstractValidator<SaveGradebookRequ
         RuleFor(r => r.Changes)
             .Must(c => c == null || c.Select(x => (x.StudentId, x.TaskId)).Distinct().Count() == c.Count)
             .WithMessage("Каждая ячейка — не больше одного раза.");
+
+        RuleFor(r => r.Attendance).Must(a => a == null || a.Count <= MaxChanges);
+        RuleForEach(r => r.Attendance).ChildRules(change => change.RuleFor(c => c.Status).IsInEnum());
+        RuleFor(r => r.Attendance)
+            .Must(a => a == null || a.Select(x => x.StudentId).Distinct().Count() == a.Count)
+            .WithMessage("Посещаемость каждого ученика — не больше одного раза.");
     }
 }

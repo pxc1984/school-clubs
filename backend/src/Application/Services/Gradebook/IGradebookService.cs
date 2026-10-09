@@ -5,8 +5,8 @@ public interface IGradebookService
     Task<GradebookDto> GetAsync(Guid lessonId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Применяет изменения ячеек одной транзакцией; журнал создаётся при первой записи.
-    /// Ставить отметку можно только ученику из группы занятия.
+    /// Применяет изменения ячеек и посещаемости одной транзакцией; журнал создаётся при первой записи.
+    /// Ставить отметку (и «не был» / «опоздал») можно только ученику из группы занятия.
     /// </summary>
     Task<GradebookDto> SaveAsync(Guid lessonId, SaveGradebookRequest request, CancellationToken cancellationToken = default);
 

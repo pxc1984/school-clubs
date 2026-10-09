@@ -51,6 +51,16 @@ public class LessonGradebookConfiguration : IEntityTypeConfiguration<LessonGrade
             .Navigation(g => g.GradebookEntries)
             .UsePropertyAccessMode(PropertyAccessMode.Field);
 
+        builder
+            .HasMany(g => g.Attendance)
+            .WithOne()
+            .HasForeignKey(a => a.LessonId)
+            .HasPrincipalKey(g => g.LessonId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder
+            .Navigation(g => g.Attendance)
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
+
         builder.HasAuditColumns();
     }
 }

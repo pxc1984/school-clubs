@@ -197,6 +197,13 @@
                                     >
                                         {#if lesson.attended}
                                             {lesson.solved} из {lesson.taskCount}
+                                            {#if lesson.attendance === "Late"}
+                                                <div
+                                                    class="text-xs font-normal text-amber-700 dark:text-amber-400"
+                                                >
+                                                    опоздал
+                                                </div>
+                                            {/if}
                                         {:else}
                                             <span
                                                 class="font-normal text-muted-foreground"
@@ -212,6 +219,11 @@
                                         Не был на занятии
                                     </p>
                                 {:else}
+                                    {#if lesson.attendance === "Late"}
+                                        <p class="mb-3 text-muted-foreground">
+                                            Опоздал на занятие.
+                                        </p>
+                                    {/if}
                                     {#if lesson.groupAverageSolved !== null}
                                         <p class="mb-3 text-muted-foreground">
                                             Решил {lesson.solved} из {lesson.taskCount},

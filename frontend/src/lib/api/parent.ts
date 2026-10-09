@@ -1,6 +1,7 @@
 import { api } from "$lib/api/client";
 import type {
     AccessRequestDto,
+    AttendanceStatus,
     DateOnly,
     GradebookEntryTaskStatus,
     GroupRefDto,
@@ -19,6 +20,8 @@ export type LastLessonDto = {
     date: DateOnly;
     topic: string | null;
     attended: boolean;
+    /** Отметка учителя «не был» / «опоздал»; null — её нет */
+    attendance: AttendanceStatus | null;
     solved: number;
     taskCount: number;
     /** null, если посетивших (кроме ребёнка) меньше порога */
@@ -82,6 +85,8 @@ export type ChildLessonDto = {
     time: TimeOnly | null;
     topic: string | null;
     attended: boolean;
+    /** Отметка учителя «не был» / «опоздал»; null — её нет */
+    attendance: AttendanceStatus | null;
     solved: number;
     taskCount: number;
     /** Балл за занятие 0..1; null — не был */

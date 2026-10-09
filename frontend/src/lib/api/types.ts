@@ -21,6 +21,9 @@ export type UserRole = "Parent" | "Teacher" | "Admin";
 export type GradebookEntryTaskStatus =
     "UnsolvedWithRemarks" | "Unsolved" | "SolvedWithRemarks" | "Solved";
 
+/** Absent — не был, Late — опоздал; без отметки — был вовремя */
+export type AttendanceStatus = "Absent" | "Late";
+
 export type ParentRelation = "Mother" | "Father" | "Guardian" | "Other";
 
 export type AccessRequestStatus =

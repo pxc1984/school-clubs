@@ -134,6 +134,9 @@
                                                 lesson.date,
                                             )}{lesson.topic
                                                 ? ` · ${lesson.topic}`
+                                                : ""}{lesson.attendance ===
+                                            "Late"
+                                                ? " · опоздал"
                                                 : ""}
                                             {#if lesson.groupAverageSolved !== null}
                                                 <br />В среднем по группе — {formatDecimal(

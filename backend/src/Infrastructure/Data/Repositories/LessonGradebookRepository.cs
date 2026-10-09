@@ -15,6 +15,7 @@ public class LessonGradebookRepository(DbContext dbContext)
             .Include(g => g.Lesson)
             .ThenInclude(l => l.Tasks)
             .Include(g => g.GradebookEntries)
+            .Include(g => g.Attendance)
             .Include(g => g.StoredFile)
             .AsSplitQuery()
             .FirstOrDefaultAsync(g => g.LessonId == lessonId, cancellationToken);
@@ -25,6 +26,8 @@ public class LessonGradebookRepository(DbContext dbContext)
     {
         return await DbSet
             .Include(g => g.GradebookEntries)
+            .Include(g => g.Attendance)
+            .AsSplitQuery()
             .Where(g => g.Lesson.ParentGroupId == groupId)
             .ToListAsync(cancellationToken);
     }
@@ -36,8 +39,10 @@ public class LessonGradebookRepository(DbContext dbContext)
             .Include(g => g.Lesson)
             .ThenInclude(l => l.Tasks)
             .Include(g => g.GradebookEntries)
+            .Include(g => g.Attendance)
             .AsSplitQuery()
-            .Where(g => g.GradebookEntries.Any(e => e.StudentId == studentId))
+            .Where(g => g.GradebookEntries.Any(e => e.StudentId == studentId)
+                        || g.Attendance.Any(a => a.StudentId == studentId))
             .ToListAsync(cancellationToken);
     }
 }

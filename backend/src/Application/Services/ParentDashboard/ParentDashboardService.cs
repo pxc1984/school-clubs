@@ -97,7 +97,7 @@ public class ParentDashboardService(
                     })
                     .ToList();
                 return new ChildLessonDto(l.Lesson.Id, l.Lesson.Date, l.Lesson.Time, l.Lesson.Topic,
-                    result is not null, result?.Solved ?? 0, l.TaskCount, result?.Score, l.AverageSolved(studentId),
+                    result is not null, l.AttendanceOf(studentId), result?.Solved ?? 0, l.TaskCount, result?.Score, l.AverageSolved(studentId),
                     tasks);
             })
             .ToList();
@@ -112,7 +112,7 @@ public class ParentDashboardService(
             var last = stats.Lessons[^1];
             var result = last.ResultOf(studentId);
             lastLesson = new LastLessonDto(last.Lesson.Id, last.Lesson.Date, last.Lesson.Topic, result is not null,
-                result?.Solved ?? 0, last.TaskCount, last.AverageSolved(studentId));
+                last.AttendanceOf(studentId), result?.Solved ?? 0, last.TaskCount, last.AverageSolved(studentId));
         }
 
         return new ChildGroupDto(group.Id, group.Title, group.IsArchived, period.LessonsAttended,

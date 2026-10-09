@@ -308,6 +308,45 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                     b.ToTable("lesson", (string)null);
                 });
 
+            modelBuilder.Entity("SchoolClubs.Domain.Entities.Gradebook.LessonAttendance", b =>
+                {
+                    b.Property<Guid>("LessonId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("lesson_id");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("student_id");
+
+                    b.Property<DateTimeOffset>("Created")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset>("LastModified")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_modified");
+
+                    b.Property<Guid?>("LastModifiedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("last_modified_by");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("status");
+
+                    b.HasKey("LessonId", "StudentId");
+
+                    b.HasIndex("StudentId");
+
+                    b.ToTable("lesson_attendance", (string)null);
+                });
+
             modelBuilder.Entity("SchoolClubs.Domain.Entities.Gradebook.LessonGradebook", b =>
                 {
                     b.Property<Guid>("Id")
@@ -706,6 +745,24 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                     b.Navigation("ParentGroup");
                 });
 
+            modelBuilder.Entity("SchoolClubs.Domain.Entities.Gradebook.LessonAttendance", b =>
+                {
+                    b.HasOne("SchoolClubs.Domain.Entities.Gradebook.LessonGradebook", null)
+                        .WithMany("Attendance")
+                        .HasForeignKey("LessonId")
+                        .HasPrincipalKey("LessonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SchoolClubs.Domain.Entities.Users.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Student");
+                });
+
             modelBuilder.Entity("SchoolClubs.Domain.Entities.Gradebook.LessonGradebook", b =>
                 {
                     b.HasOne("SchoolClubs.Domain.Entities.Data.DataEntry", "StoredFile")
@@ -826,6 +883,8 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("SchoolClubs.Domain.Entities.Gradebook.LessonGradebook", b =>
                 {
+                    b.Navigation("Attendance");
+
                     b.Navigation("GradebookEntries");
                 });
 

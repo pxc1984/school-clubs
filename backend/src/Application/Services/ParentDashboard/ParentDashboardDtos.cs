@@ -23,11 +23,13 @@ public record ChildGroupDto(
     GroupPosition? Position);
 
 /// <summary>«Решил 4 из 5, в среднем по группе 3,2»; <c>Attended = false</c> — «не был на занятии».</summary>
+/// <param name="Attendance">Отметка учителя «не был» / «опоздал»; <c>null</c> — её нет.</param>
 public record LastLessonDto(
     Guid LessonId,
     DateOnly Date,
     string? Topic,
     bool Attended,
+    AttendanceStatus? Attendance,
     int Solved,
     int TaskCount,
     double? GroupAverageSolved);
@@ -59,12 +61,14 @@ public record ChartPointDto(
     double? GroupP75);
 
 /// <summary>Занятие в ленте, новые сверху.</summary>
+/// <param name="Attendance">Отметка учителя «не был» / «опоздал»; <c>null</c> — её нет.</param>
 public record ChildLessonDto(
     Guid LessonId,
     DateOnly Date,
     TimeOnly? Time,
     string? Topic,
     bool Attended,
+    AttendanceStatus? Attendance,
     int Solved,
     int TaskCount,
     double? Score,

@@ -49,6 +49,19 @@ public class GradebookService(
             gradebook.SetEntry(student, task, status, change.Comment);
         }
 
+        foreach (var change in request.Attendance ?? [])
+        {
+            if (change.Status is not { } attendance)
+            {
+                gradebook.RemoveAttendance(change.StudentId);
+                continue;
+            }
+
+            var student = group.Students.FirstOrDefault(s => s.Id == change.StudentId)
+                          ?? throw new ArgumentException($"student {change.StudentId} isn't in the lesson's group");
+            gradebook.SetAttendance(student, attendance);
+        }
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return await ToDtoAsync(lesson, group, gradebook);
     }
@@ -91,9 +104,14 @@ public class GradebookService(
     private async Task<GradebookDto> ToDtoAsync(Lesson lesson, Group group, LessonGradebook? gradebook)
     {
         var entries = gradebook?.GradebookEntries.ToList() ?? [];
+        var attendance = gradebook?.Attendance.ToList() ?? [];
 
         var rows = group.Students.Select(s => ToStudent(s, true)).ToList();
-        foreach (var studentId in entries.Select(e => e.StudentId).Distinct().Where(id => !group.HasStudent(id)))
+        var formerIds = entries.Select(e => e.StudentId)
+            .Concat(attendance.Select(a => a.StudentId))
+            .Distinct()
+            .Where(id => !group.HasStudent(id));
+        foreach (var studentId in formerIds)
         {
             if (await students.FindByIdAsync(studentId) is { } former)
                 rows.Add(ToStudent(former, false));
@@ -102,7 +120,8 @@ public class GradebookService(
         var lessonDto = LessonService.ToDto(lesson, group, gradebook);
         return new GradebookDto(lesson.Id, lesson.Date, lesson.Topic, gradebook?.PublishedAt, lessonDto.Tasks,
             rows.OrderBy(s => !s.InGroup).ThenBy(s => s.LastName).ThenBy(s => s.FirstName).ToList(),
-            entries.Select(e => new GradebookCellDto(e.StudentId, e.TaskId, e.Status, e.Comment)).ToList());
+            entries.Select(e => new GradebookCellDto(e.StudentId, e.TaskId, e.Status, e.Comment)).ToList(),
+            attendance.Select(a => new GradebookAttendanceDto(a.StudentId, a.Status)).ToList());
     }
 
     private static GradebookStudentDto ToStudent(Student student, bool inGroup)

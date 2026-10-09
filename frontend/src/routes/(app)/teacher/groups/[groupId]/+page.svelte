@@ -92,7 +92,7 @@
         let total = 0;
         for (const lesson of data.summary?.lessons ?? []) {
             const cell = matrixCell(studentId, lesson.id);
-            if (!cell) continue;
+            if (!cell || cell.attendance === "Absent") continue;
             solved += cell.solved;
             total += lesson.taskCount;
         }
@@ -396,25 +396,41 @@
                                             lesson.id,
                                         )}
                                         <td class="border-b border-l p-0.5">
-                                            {#if cell}
+                                            {#if cell?.attendance === "Absent"}
+                                                <span
+                                                    class="flex h-7 min-w-11 items-center justify-center text-xs text-muted-foreground"
+                                                    title="Не был на занятии"
+                                                >
+                                                    н
+                                                </span>
+                                            {:else if cell}
+                                                {@const late =
+                                                    cell.attendance === "Late"}
                                                 <span
                                                     class={cn(
-                                                        "flex h-7 min-w-11 items-center justify-center rounded text-xs tabular-nums",
+                                                        "relative flex h-7 min-w-11 items-center justify-center rounded text-xs tabular-nums",
                                                         scoreClass(
                                                             cell,
                                                             lesson.taskCount,
                                                         ),
                                                     )}
-                                                    title="Решил {cell.solved} из {lesson.taskCount}"
+                                                    title="{late
+                                                        ? 'Опоздал. '
+                                                        : ''}Решил {cell.solved} из {lesson.taskCount}"
                                                 >
                                                     {cell.solved}/{lesson.taskCount}
+                                                    {#if late}
+                                                        <span
+                                                            class="absolute top-0.5 right-0.5 size-1.5 rounded-full bg-amber-500"
+                                                        ></span>
+                                                    {/if}
                                                 </span>
                                             {:else}
                                                 <span
-                                                    class="flex h-7 min-w-11 items-center justify-center text-xs text-muted-foreground"
-                                                    title="Нет отметок — не был"
+                                                    class="flex h-7 min-w-11 items-center justify-center text-xs text-muted-foreground/50"
+                                                    title="Нет отметок"
                                                 >
-                                                    н
+                                                    ·
                                                 </span>
                                             {/if}
                                         </td>
@@ -425,7 +441,8 @@
                     </table>
                 </div>
                 <p class="mt-2 text-xs text-muted-foreground">
-                    Решённые задачи из заданных; «н» — нет отметок (не был).
+                    Решённые задачи из заданных; «н» — не был, жёлтая точка —
+                    опоздал, «·» — нет отметок.
                     Курсивом — неопубликованные занятия.
                 </p>
             {/if}
