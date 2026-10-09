@@ -3,7 +3,7 @@
     import { invalidateAll } from "$app/navigation";
     import { errorMessage, fieldErrors } from "$lib/api/client";
     import { cancelAccessRequest, createAccessRequest } from "$lib/api/parent";
-    import type { AccessRequestDto, Relation } from "$lib/api/types";
+    import type { AccessRequestDto, ParentRelation } from "$lib/api/types";
     import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
     import ConsentCheckbox from "$lib/components/consent-checkbox.svelte";
     import PageHeader from "$lib/components/page-header.svelte";
@@ -22,7 +22,7 @@
 
     const MAX_PENDING = 5;
 
-    const RELATIONS: { value: Relation; label: string }[] = [
+    const RELATIONS: { value: ParentRelation; label: string }[] = [
         { value: "Mother", label: "Мама" },
         { value: "Father", label: "Папа" },
         { value: "Guardian", label: "Опекун" },
@@ -43,7 +43,7 @@
             firstName: "",
             middleName: "",
             grade: "",
-            relation: "" as Relation | "",
+            relation: "" as ParentRelation | "",
             comment: "",
             consent: false,
         };
@@ -81,7 +81,7 @@
                 childFirstName: form.firstName.trim(),
                 childMiddleName: form.middleName.trim() || null,
                 grade: form.grade.trim() || null,
-                relation: form.relation as Relation,
+                relation: form.relation as ParentRelation,
                 comment: form.comment.trim() || null,
                 acceptChildDataConsent: form.consent,
             });

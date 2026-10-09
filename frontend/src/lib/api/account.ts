@@ -1,8 +1,11 @@
 import { api, apiUrl } from "$lib/api/client";
 import type { Guid, PersonName, UserRole } from "$lib/api/types";
 
-export type AccountDto = PersonName & {
+export type AccountDto = {
     id: Guid;
+    firstName: string;
+    middleName: string;
+    lastName: string;
     email: string;
     /** без "@", в нижнем регистре; подтягивается из Telegram/Яндекса, если не задан */
     username: string | null;
@@ -18,9 +21,22 @@ export type UpdateAccountRequest = PersonName & {
 };
 
 export type ChangePasswordRequest = {
-    /** null, если пароля ещё нет (вход только через Яндекс) */
+    /** null, если пароля ещё нет (вход только через внешний провайдер) */
     currentPassword: string | null;
     newPassword: string;
+};
+
+export type ChangeUsernameRequest = {
+    /** null или пустая строка убирает ник */
+    username: string | null;
+};
+
+export type AvatarDto = {
+    id: Guid;
+};
+
+export type AcceptConsentRequest = {
+    accept: boolean;
 };
 
 export async function getAccount(): Promise<AccountDto> {
@@ -41,7 +57,7 @@ export async function changeUsername(
 ): Promise<AccountDto> {
     const response = await api.put<AccountDto>("/account/username", {
         username,
-    });
+    } satisfies ChangeUsernameRequest);
     return response.data;
 }
 
@@ -55,10 +71,10 @@ export function avatarUrl(
     return avatarId ? apiUrl(`/avatars/${avatarId}`) : undefined;
 }
 
-export async function uploadAvatar(file: File): Promise<{ id: Guid }> {
+export async function uploadAvatar(file: File): Promise<AvatarDto> {
     const form = new FormData();
     form.append("file", file);
-    const response = await api.put<{ id: Guid }>("/account/avatar", form, {
+    const response = await api.put<AvatarDto>("/account/avatar", form, {
         headers: { "Content-Type": "multipart/form-data" },
     });
     return response.data;
@@ -84,5 +100,7 @@ export async function unlinkProvider(provider: string): Promise<void> {
 }
 
 export async function acceptConsent(): Promise<void> {
-    await api.post("/account/consent", { accept: true });
+    await api.post("/account/consent", {
+        accept: true,
+    } satisfies AcceptConsentRequest);
 }

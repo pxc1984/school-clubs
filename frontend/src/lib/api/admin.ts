@@ -5,43 +5,60 @@ import type {
     DateOnly,
     DateTimeString,
     GroupRefDto,
-    GroupShortDto,
     Guid,
+    NewStudentRequest,
     PersonName,
     StudentDto,
+    UserRefDto,
     UserRole,
-    UserShortDto,
 } from "$lib/api/types";
 
+// --- запросы доступа
+
+export type RequestParentDto = {
+    id: Guid;
+    lastName: string;
+    firstName: string;
+    middleName: string;
+    email: string;
+    phone: string | null;
+    children: StudentDto[];
+};
+
 export type AdminAccessRequestDto = AccessRequestDto & {
-    parent: UserShortDto & {
-        phone: string | null;
-        children: StudentDto[];
-    };
+    parent: RequestParentDto;
     /** Ученик, к которому привязан одобренный запрос */
     student: StudentDto | null;
     /** Похожие ученики из указанной группы */
     suggestions: StudentDto[];
 };
 
-export type NewStudentRequest = PersonName & {
-    grade: string | null;
+export type PendingCountDto = {
+    count: number;
 };
 
-export type ApproveRequest =
+export type ApproveAccessRequestRequest =
     | { studentId: Guid; newStudent: null }
     | { studentId: null; newStudent: NewStudentRequest };
 
-export type UserRefDto = PersonName & { id: Guid };
+export type RejectAccessRequestRequest = {
+    reason: string;
+};
 
-export type AdminGroupDto = GroupShortDto & {
+// --- группы
+
+export type GroupSummaryDto = {
+    id: Guid;
+    title: string;
     description: string | null;
     isArchived: boolean;
     teachers: UserRefDto[];
     studentCount: number;
 };
 
-export type AdminGroupDetailsDto = GroupShortDto & {
+export type GroupDetailsDto = {
+    id: Guid;
+    title: string;
     description: string | null;
     isArchived: boolean;
     teachers: UserRefDto[];
@@ -57,36 +74,62 @@ export type UpdateGroupRequest = CreateGroupRequest & {
     isArchived: boolean;
 };
 
-export type AdminUserDto = PersonName & {
+export type AddGroupStudentsRequest = {
+    studentIds: Guid[];
+    newStudents: NewStudentRequest[];
+};
+
+// --- пользователи
+
+export type UserSummaryDto = {
     id: Guid;
+    lastName: string;
+    firstName: string;
+    middleName: string;
     email: string;
     phone: string | null;
     roles: UserRole[];
     isBlocked: boolean;
 };
 
-export type AdminUserDetailsDto = AdminUserDto & {
+export type UserDetailsDto = UserSummaryDto & {
     consentAcceptedAt: DateTimeString | null;
     loginProviders: string[];
     children: StudentDto[];
     groups: GroupRefDto[];
 };
 
+export type SetRolesRequest = {
+    roles: UserRole[];
+};
+
+export type TemporaryPasswordDto = {
+    password: string;
+};
+
 export type InviteTeacherRequest = PersonName & {
     email: string;
 };
 
-export type AdminStudentDto = StudentDto & {
+// --- ученики
+
+export type StudentListItemDto = StudentDto & {
     groups: GroupRefDto[];
 };
 
-export type AdminStudentDetailsDto = AdminStudentDto & {
+export type StudentDetailsDto = StudentListItemDto & {
     parents: UserRefDto[];
     gradebookEntryCount: number;
 };
 
 export type CreateStudentRequest = NewStudentRequest & {
     groupId: Guid | null;
+};
+
+export type UpdateStudentRequest = NewStudentRequest;
+
+export type ParseNamesRequest = {
+    text: string;
 };
 
 /** Строка вставленного списка ФИО */
@@ -108,6 +151,8 @@ export type MergeStudentsResultDto = {
     droppedEntries: number;
 };
 
+// --- удаление ПДн: на бэкенде эндпоинтов пока нет, контракт предварительный
+
 export type ErasurePreviewDto = {
     entries: number;
     groups: number;
@@ -122,17 +167,15 @@ export type ErasureRecordDto = {
     filesCleaned: boolean;
 };
 
-export type { GroupRefDto };
+// --- API: запросы доступа
 
 /** Запросы доступа, ждущие решения, — бейдж в навигации */
 export async function getPendingRequestCount(): Promise<number> {
-    const response = await api.get<{ count: number }>(
+    const response = await api.get<PendingCountDto>(
         "/admin/access-requests/pending-count",
     );
     return response.data.count;
 }
-
-// --- запросы доступа
 
 export async function listAdminRequests(
     status: AccessRequestStatus | null,
@@ -146,46 +189,45 @@ export async function listAdminRequests(
 
 export async function approveRequest(
     id: Guid,
-    request: ApproveRequest,
+    request: ApproveAccessRequestRequest,
 ): Promise<void> {
     await api.post(`/admin/access-requests/${id}/approve`, request);
 }
 
 export async function rejectRequest(id: Guid, reason: string): Promise<void> {
-    await api.post(`/admin/access-requests/${id}/reject`, { reason });
+    await api.post(`/admin/access-requests/${id}/reject`, {
+        reason,
+    } satisfies RejectAccessRequestRequest);
 }
 
 // --- группы
 
 export async function listAdminGroups(
     includeArchived = false,
-): Promise<AdminGroupDto[]> {
-    const response = await api.get<AdminGroupDto[]>("/admin/groups", {
+): Promise<GroupSummaryDto[]> {
+    const response = await api.get<GroupSummaryDto[]>("/admin/groups", {
         params: { includeArchived: includeArchived || undefined },
     });
     return response.data;
 }
 
-export async function getAdminGroup(id: Guid): Promise<AdminGroupDetailsDto> {
-    const response = await api.get<AdminGroupDetailsDto>(`/admin/groups/${id}`);
+export async function getAdminGroup(id: Guid): Promise<GroupDetailsDto> {
+    const response = await api.get<GroupDetailsDto>(`/admin/groups/${id}`);
     return response.data;
 }
 
 export async function createGroup(
     request: CreateGroupRequest,
-): Promise<AdminGroupDetailsDto> {
-    const response = await api.post<AdminGroupDetailsDto>(
-        "/admin/groups",
-        request,
-    );
+): Promise<GroupDetailsDto> {
+    const response = await api.post<GroupDetailsDto>("/admin/groups", request);
     return response.data;
 }
 
 export async function updateGroup(
     id: Guid,
     request: UpdateGroupRequest,
-): Promise<AdminGroupDetailsDto> {
-    const response = await api.put<AdminGroupDetailsDto>(
+): Promise<GroupDetailsDto> {
+    const response = await api.put<GroupDetailsDto>(
         `/admin/groups/${id}`,
         request,
     );
@@ -200,8 +242,8 @@ export async function deleteGroup(id: Guid): Promise<void> {
 export async function addGroupTeacher(
     groupId: Guid,
     teacherId: Guid,
-): Promise<AdminGroupDetailsDto> {
-    const response = await api.post<AdminGroupDetailsDto>(
+): Promise<GroupDetailsDto> {
+    const response = await api.post<GroupDetailsDto>(
         `/admin/groups/${groupId}/teachers/${teacherId}`,
     );
     return response.data;
@@ -210,8 +252,8 @@ export async function addGroupTeacher(
 export async function removeGroupTeacher(
     groupId: Guid,
     teacherId: Guid,
-): Promise<AdminGroupDetailsDto> {
-    const response = await api.delete<AdminGroupDetailsDto>(
+): Promise<GroupDetailsDto> {
+    const response = await api.delete<GroupDetailsDto>(
         `/admin/groups/${groupId}/teachers/${teacherId}`,
     );
     return response.data;
@@ -222,10 +264,10 @@ export async function addAdminGroupStudents(
     groupId: Guid,
     studentIds: Guid[],
     newStudents: NewStudentRequest[],
-): Promise<AdminGroupDetailsDto> {
-    const response = await api.post<AdminGroupDetailsDto>(
+): Promise<GroupDetailsDto> {
+    const response = await api.post<GroupDetailsDto>(
         `/admin/groups/${groupId}/students`,
-        { studentIds, newStudents },
+        { studentIds, newStudents } satisfies AddGroupStudentsRequest,
     );
     return response.data;
 }
@@ -234,8 +276,8 @@ export async function addAdminGroupStudents(
 export async function removeAdminGroupStudent(
     groupId: Guid,
     studentId: Guid,
-): Promise<AdminGroupDetailsDto> {
-    const response = await api.delete<AdminGroupDetailsDto>(
+): Promise<GroupDetailsDto> {
+    const response = await api.delete<GroupDetailsDto>(
         `/admin/groups/${groupId}/students/${studentId}`,
     );
     return response.data;
@@ -246,26 +288,25 @@ export async function removeAdminGroupStudent(
 export async function listUsers(
     q: string,
     role: UserRole | null = null,
-): Promise<AdminUserDto[]> {
-    const response = await api.get<AdminUserDto[]>("/admin/users", {
+): Promise<UserSummaryDto[]> {
+    const response = await api.get<UserSummaryDto[]>("/admin/users", {
         params: { q: q || undefined, role: role ?? undefined },
     });
     return response.data;
 }
 
-export async function getUser(id: Guid): Promise<AdminUserDetailsDto> {
-    const response = await api.get<AdminUserDetailsDto>(`/admin/users/${id}`);
+export async function getUser(id: Guid): Promise<UserDetailsDto> {
+    const response = await api.get<UserDetailsDto>(`/admin/users/${id}`);
     return response.data;
 }
 
 export async function setUserRoles(
     id: Guid,
     roles: UserRole[],
-): Promise<AdminUserDetailsDto> {
-    const response = await api.put<AdminUserDetailsDto>(
-        `/admin/users/${id}/roles`,
-        { roles },
-    );
+): Promise<UserDetailsDto> {
+    const response = await api.put<UserDetailsDto>(`/admin/users/${id}/roles`, {
+        roles,
+    } satisfies SetRolesRequest);
     return response.data;
 }
 
@@ -273,8 +314,8 @@ export async function setUserRoles(
 export async function setUserBlocked(
     id: Guid,
     blocked: boolean,
-): Promise<AdminUserDetailsDto> {
-    const response = await api.post<AdminUserDetailsDto>(
+): Promise<UserDetailsDto> {
+    const response = await api.post<UserDetailsDto>(
         `/admin/users/${id}/${blocked ? "block" : "unblock"}`,
     );
     return response.data;
@@ -282,7 +323,7 @@ export async function setUserBlocked(
 
 /** Временный пароль показывается один раз */
 export async function resetUserPassword(id: Guid): Promise<string> {
-    const response = await api.post<{ password: string }>(
+    const response = await api.post<TemporaryPasswordDto>(
         `/admin/users/${id}/reset-password`,
     );
     return response.data.password;
@@ -291,8 +332,8 @@ export async function resetUserPassword(id: Guid): Promise<string> {
 /** Создать учителя по email или выдать роль существующему пользователю */
 export async function inviteTeacher(
     request: InviteTeacherRequest,
-): Promise<AdminUserDetailsDto> {
-    const response = await api.post<AdminUserDetailsDto>(
+): Promise<UserDetailsDto> {
+    const response = await api.post<UserDetailsDto>(
         "/admin/teachers/invite",
         request,
     );
@@ -302,8 +343,8 @@ export async function inviteTeacher(
 export async function linkChild(
     parentId: Guid,
     studentId: Guid,
-): Promise<AdminUserDetailsDto> {
-    const response = await api.post<AdminUserDetailsDto>(
+): Promise<UserDetailsDto> {
+    const response = await api.post<UserDetailsDto>(
         `/admin/parents/${parentId}/children/${studentId}`,
     );
     return response.data;
@@ -312,8 +353,8 @@ export async function linkChild(
 export async function unlinkChild(
     parentId: Guid,
     studentId: Guid,
-): Promise<AdminUserDetailsDto> {
-    const response = await api.delete<AdminUserDetailsDto>(
+): Promise<UserDetailsDto> {
+    const response = await api.delete<UserDetailsDto>(
         `/admin/parents/${parentId}/children/${studentId}`,
     );
     return response.data;
@@ -324,24 +365,22 @@ export async function unlinkChild(
 export async function listStudents(
     q: string,
     groupId: Guid | null = null,
-): Promise<AdminStudentDto[]> {
-    const response = await api.get<AdminStudentDto[]>("/admin/students", {
+): Promise<StudentListItemDto[]> {
+    const response = await api.get<StudentListItemDto[]>("/admin/students", {
         params: { q: q || undefined, groupId: groupId ?? undefined },
     });
     return response.data;
 }
 
-export async function getStudent(id: Guid): Promise<AdminStudentDetailsDto> {
-    const response = await api.get<AdminStudentDetailsDto>(
-        `/admin/students/${id}`,
-    );
+export async function getStudent(id: Guid): Promise<StudentDetailsDto> {
+    const response = await api.get<StudentDetailsDto>(`/admin/students/${id}`);
     return response.data;
 }
 
 export async function createStudent(
     request: CreateStudentRequest,
-): Promise<AdminStudentDetailsDto> {
-    const response = await api.post<AdminStudentDetailsDto>(
+): Promise<StudentDetailsDto> {
+    const response = await api.post<StudentDetailsDto>(
         "/admin/students",
         request,
     );
@@ -350,9 +389,9 @@ export async function createStudent(
 
 export async function updateStudent(
     id: Guid,
-    request: NewStudentRequest,
-): Promise<AdminStudentDetailsDto> {
-    const response = await api.put<AdminStudentDetailsDto>(
+    request: UpdateStudentRequest,
+): Promise<StudentDetailsDto> {
+    const response = await api.put<StudentDetailsDto>(
         `/admin/students/${id}`,
         request,
     );
@@ -377,7 +416,7 @@ export async function mergeStudents(
 export async function parseNames(text: string): Promise<ParsedNameDto[]> {
     const response = await api.post<ParsedNameDto[]>(
         "/admin/students/parse-names",
-        { text },
+        { text } satisfies ParseNamesRequest,
     );
     return response.data;
 }

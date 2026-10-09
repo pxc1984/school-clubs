@@ -1,7 +1,7 @@
-import type { PercentileBucket, Period } from "$lib/api/parent";
+import type { GroupPosition, Period } from "$lib/api/parent";
 import { toDateOnly } from "$lib/format";
 
-export const BUCKET_LABELS: Record<PercentileBucket, string> = {
+export const POSITION_LABELS: Record<GroupPosition, string> = {
     Top10: "В топ-10% группы",
     Top25: "В топ-25% группы",
     AboveHalf: "Выше половины группы",

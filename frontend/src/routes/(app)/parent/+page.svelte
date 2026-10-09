@@ -8,7 +8,7 @@
     import { Button } from "$lib/components/ui/button";
     import * as Empty from "$lib/components/ui/empty";
     import { formatDate, formatDecimal, fullName } from "$lib/format";
-    import { BUCKET_LABELS } from "$lib/stats";
+    import { POSITION_LABELS } from "$lib/stats";
 
     let { data } = $props();
 </script>
@@ -101,7 +101,9 @@
                                         {#if group.position}
                                             <Badge variant="secondary">
                                                 <TrophyIcon />
-                                                {BUCKET_LABELS[group.position]}
+                                                {POSITION_LABELS[
+                                                    group.position
+                                                ]}
                                             </Badge>
                                         {/if}
                                     </div>

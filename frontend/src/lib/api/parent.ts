@@ -2,23 +2,22 @@ import { api } from "$lib/api/client";
 import type {
     AccessRequestDto,
     DateOnly,
-    GradeStatus,
+    GradebookEntryTaskStatus,
     GroupRefDto,
-    GroupShortDto,
     Guid,
-    Relation,
+    ParentRelation,
     StudentDto,
     TimeOnly,
 } from "$lib/api/types";
 
-/** Корзины положения в группе; ниже половины API не сообщает. */
-export type PercentileBucket = "Top10" | "Top25" | "AboveHalf";
+/** Положение в группе; ниже половины API не сообщает (null). */
+export type GroupPosition = "Top10" | "Top25" | "AboveHalf";
 
-export type LessonResultDto = {
+/** «Решил 4 из 5, в среднем по группе 3,2»; attended false — «не был на занятии». */
+export type LastLessonDto = {
     lessonId: Guid;
     date: DateOnly;
     topic: string | null;
-    /** false — «не был на занятии» */
     attended: boolean;
     solved: number;
     taskCount: number;
@@ -29,15 +28,15 @@ export type LessonResultDto = {
 export type ChildGroupDto = GroupRefDto & {
     lessonsAttended: number;
     lessonsTotal: number;
-    lastLesson: LessonResultDto | null;
-    position: PercentileBucket | null;
+    lastLesson: LastLessonDto | null;
+    position: GroupPosition | null;
 };
 
 export type ChildDto = StudentDto & {
     groups: ChildGroupDto[];
 };
 
-export type SeriesPointDto = {
+export type ChartPointDto = {
     lessonId: Guid;
     date: DateOnly;
     /** Балл ребёнка 0..1; null — не был на занятии */
@@ -53,30 +52,31 @@ export type ChildSummaryDto = {
     group: GroupRefDto;
     from: DateOnly | null;
     to: DateOnly | null;
-    /** Балл за период 0..1 по весам статусов */
-    score: number | null;
-    tasksSolved: number;
-    tasksTotal: number;
     lessonsAttended: number;
     lessonsTotal: number;
-    position: PercentileBucket | null;
+    tasksSolved: number;
+    tasksTotal: number;
+    /** Балл за период 0..1 по весам статусов; null — не был ни на одном занятии */
+    score: number | null;
+    position: GroupPosition | null;
     /** Сколько занятий подряд решено всё; null, если меньше двух */
     perfectStreak: number | null;
-    chart: SeriesPointDto[];
+    chart: ChartPointDto[];
 };
 
-export type ParentTaskDto = {
+export type ChildTaskDto = {
     taskId: Guid;
     order: number;
     title: string | null;
-    status: GradeStatus | null;
+    status: GradebookEntryTaskStatus | null;
     comment: string | null;
     /** «решили 12 из 15»; null, если посетивших меньше порога */
     groupSolved: number | null;
     groupAttended: number | null;
 };
 
-export type ParentLessonDto = {
+/** Занятие в ленте, новые сверху */
+export type ChildLessonDto = {
     lessonId: Guid;
     date: DateOnly;
     time: TimeOnly | null;
@@ -87,25 +87,28 @@ export type ParentLessonDto = {
     /** Балл за занятие 0..1; null — не был */
     score: number | null;
     groupAverageSolved: number | null;
-    tasks: ParentTaskDto[];
+    tasks: ChildTaskDto[];
 };
 
-export type GroupOptionDto = GroupShortDto & {
+export type ParentGroupDto = {
+    id: Guid;
+    title: string;
     description: string | null;
 };
 
-export type CreateAccessRequest = {
+export type CreateAccessRequestRequest = {
     groupId: Guid;
+    childLastName: string;
     childFirstName: string;
     childMiddleName: string | null;
-    childLastName: string;
     grade: string | null;
-    relation: Relation;
+    relation: ParentRelation;
     comment: string | null;
     /** Чекбокс «Я законный представитель и согласен на обработку данных ребёнка» */
     acceptChildDataConsent: boolean;
 };
 
+/** Не схема API: query-параметры from/to сводки и ленты. */
 export type Period = { from: DateOnly | null; to: DateOnly | null };
 
 function periodParams(period: Period) {
@@ -136,16 +139,16 @@ export async function listChildLessons(
     studentId: Guid,
     groupId: Guid,
     period: Period,
-): Promise<ParentLessonDto[]> {
-    const response = await api.get<ParentLessonDto[]>(
+): Promise<ChildLessonDto[]> {
+    const response = await api.get<ChildLessonDto[]>(
         `/parent/children/${studentId}/groups/${groupId}/lessons`,
         { params: periodParams(period) },
     );
     return response.data;
 }
 
-export async function listGroupOptions(): Promise<GroupOptionDto[]> {
-    const response = await api.get<GroupOptionDto[]>("/parent/groups");
+export async function listGroupOptions(): Promise<ParentGroupDto[]> {
+    const response = await api.get<ParentGroupDto[]>("/parent/groups");
     return response.data;
 }
 
@@ -157,7 +160,7 @@ export async function listAccessRequests(): Promise<AccessRequestDto[]> {
 }
 
 export async function createAccessRequest(
-    request: CreateAccessRequest,
+    request: CreateAccessRequestRequest,
 ): Promise<AccessRequestDto> {
     const response = await api.post<AccessRequestDto>(
         "/parent/access-requests",

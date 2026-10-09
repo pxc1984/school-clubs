@@ -17,10 +17,14 @@
     import { errorMessage } from "$lib/api/client";
     import {
         saveGradebook,
-        type GradebookChangeDto,
-        type GradebookEntryDto,
+        type GradebookCellChange,
+        type GradebookCellDto,
     } from "$lib/api/teacher";
-    import type { GradeStatus, StudentDto, TaskDto } from "$lib/api/types";
+    import type {
+        GradebookEntryTaskStatus,
+        StudentDto,
+        TaskDto,
+    } from "$lib/api/types";
 
     type GridStudent = StudentDto & { inGroup?: boolean };
     import { Button } from "$lib/components/ui/button";
@@ -50,7 +54,7 @@
         lessonId: string;
         students: GridStudent[];
         tasks: TaskDto[];
-        entries: GradebookEntryDto[];
+        entries: GradebookCellDto[];
         saveState?: SaveState;
         onAddTask?: () => void;
         onRenameTask?: (task: TaskDto) => void;
@@ -60,7 +64,7 @@
     const DEBOUNCE_MS = 1500;
     const COMMENT_MAX = 500;
 
-    type Cell = { status: GradeStatus; comment: string | null };
+    type Cell = { status: GradebookEntryTaskStatus; comment: string | null };
 
     const key = (studentId: string, taskId: string) => `${studentId}:${taskId}`;
 
@@ -110,7 +114,7 @@
 
         const batch = new Map(dirty);
         dirty.clear();
-        const changes: GradebookChangeDto[] = [...batch].map(
+        const changes: GradebookCellChange[] = [...batch].map(
             ([cellKey, value]) => {
                 const [studentId, taskId] = cellKey.split(":");
                 return {
@@ -211,7 +215,11 @@
         else if (focusRow < students.length - 1) void moveTo(focusRow + 1, 0);
     }
 
-    function setStatus(row: number, col: number, status: GradeStatus | null) {
+    function setStatus(
+        row: number,
+        col: number,
+        status: GradebookEntryTaskStatus | null,
+    ) {
         const student = students[row];
         const task = tasks[col];
         const current = cells.get(key(student.id, task.id));

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { GradeStatus } from "$lib/api/types";
+    import type { GradebookEntryTaskStatus } from "$lib/api/types";
     import { GRADES } from "$lib/grades";
     import { cn } from "$lib/utils";
 
@@ -8,7 +8,7 @@
         withLabel = false,
         class: className,
     }: {
-        status: GradeStatus | null;
+        status: GradebookEntryTaskStatus | null;
         withLabel?: boolean;
         class?: string;
     } = $props();

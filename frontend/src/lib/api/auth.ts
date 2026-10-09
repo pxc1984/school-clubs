@@ -8,22 +8,26 @@ export type MeDto = {
     middleName: string | null;
     lastName: string | null;
     email: string | null;
-    avatarId: Guid | null;
     roles: UserRole[];
-    isServiceAdmin: boolean;
     /** Не принята текущая версия политики ПДн — пускаем только на /consent. */
     consentRequired: boolean;
+    isServiceAdmin: boolean;
+    avatarId: Guid | null;
 };
 
 export type RegisterRequest = PersonName & {
     email: string;
-    phone: string | null;
     password: string;
+    phone: string | null;
     acceptPersonalDataPolicy: boolean;
 };
 
 export type LoginRequest = {
     email: string;
+    password: string;
+};
+
+export type ServiceAdminLoginRequest = {
     password: string;
 };
 
@@ -51,7 +55,9 @@ export async function logout(): Promise<void> {
 }
 
 export async function adminLogin(password: string): Promise<void> {
-    await api.post("/admin/login", { password });
+    await api.post("/admin/login", {
+        password,
+    } satisfies ServiceAdminLoginRequest);
 }
 
 export async function adminLogout(): Promise<void> {

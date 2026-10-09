@@ -2,14 +2,17 @@ import { api, apiUrl } from "$lib/api/client";
 import type {
     DateOnly,
     DateTimeString,
-    GradeStatus,
+    GradebookEntryTaskStatus,
     Guid,
+    NewStudentRequest,
     StudentDto,
     TaskDto,
     TimeOnly,
 } from "$lib/api/types";
 
-export type TeacherGroupDto = {
+// --- группы
+
+export type TeacherGroupCardDto = {
     id: Guid;
     title: string;
     description: string | null;
@@ -20,7 +23,7 @@ export type TeacherGroupDto = {
     unfilledLessonCount: number;
 };
 
-export type LessonListItemDto = {
+export type LessonSummaryDto = {
     id: Guid;
     date: DateOnly;
     time: TimeOnly | null;
@@ -31,14 +34,42 @@ export type LessonListItemDto = {
     isPublished: boolean;
 };
 
-export type TeacherGroupDetailsDto = {
+export type TeacherGroupDto = {
     id: Guid;
     title: string;
     description: string | null;
     isArchived: boolean;
     students: StudentDto[];
-    lessons: LessonListItemDto[];
+    lessons: LessonSummaryDto[];
 };
+
+export type SummaryLessonDto = {
+    id: Guid;
+    date: DateOnly;
+    topic: string | null;
+    taskCount: number;
+    isPublished: boolean;
+};
+
+/** inGroup false — выбывший ученик, у которого остались отметки */
+export type SummaryStudentDto = StudentDto & { inGroup: boolean };
+
+/** Ячейка есть, только если у ученика есть отметки на занятии */
+export type SummaryCellDto = {
+    studentId: Guid;
+    lessonId: Guid;
+    marked: number;
+    /** Решено, в том числе с замечаниями */
+    solved: number;
+};
+
+export type GroupMatrixDto = {
+    lessons: SummaryLessonDto[];
+    students: SummaryStudentDto[];
+    cells: SummaryCellDto[];
+};
+
+// --- занятия
 
 export type LessonDto = {
     id: Guid;
@@ -65,23 +96,20 @@ export type UpdateLessonRequest = {
     topic: string | null;
 };
 
+export type TaskTitleRequest = {
+    title: string | null;
+};
+
+// --- журнал
+
 /** inGroup false — выбывший ученик, у которого остались отметки */
 export type GradebookStudentDto = StudentDto & { inGroup: boolean };
 
-export type GradebookEntryDto = {
+export type GradebookCellDto = {
     studentId: Guid;
     taskId: Guid;
-    status: GradeStatus;
+    status: GradebookEntryTaskStatus;
     comment: string | null;
-};
-
-export type ImportFileDto = {
-    uploadId: Guid;
-    fileName: string;
-    sizeBytes: number;
-    uploadedAt: DateTimeString;
-    /** Этот файл сейчас прикреплён к журналу (последний применённый импорт) */
-    attached: boolean;
 };
 
 export type GradebookDto = {
@@ -91,35 +119,31 @@ export type GradebookDto = {
     publishedAt: DateTimeString | null;
     tasks: TaskDto[];
     students: GradebookStudentDto[];
-    entries: GradebookEntryDto[];
+    entries: GradebookCellDto[];
 };
 
-export type GradebookChangeDto = {
+export type GradebookCellChange = {
     studentId: Guid;
     taskId: Guid;
     /** null — очистить ячейку */
-    status: GradeStatus | null;
+    status: GradebookEntryTaskStatus | null;
     /** Ячейка задаётся целиком: null убирает комментарий */
     comment: string | null;
 };
 
-export type GroupMatrixDto = {
-    lessons: {
-        id: Guid;
-        date: DateOnly;
-        topic: string | null;
-        taskCount: number;
-        isPublished: boolean;
-    }[];
-    students: GradebookStudentDto[];
-    /** Ячейка есть, только если у ученика есть отметки на занятии */
-    cells: {
-        studentId: Guid;
-        lessonId: Guid;
-        marked: number;
-        /** Решено, в том числе с замечаниями */
-        solved: number;
-    }[];
+export type SaveGradebookRequest = {
+    changes: GradebookCellChange[];
+};
+
+// --- импорт XLSX
+
+export type ImportFileDto = {
+    uploadId: Guid;
+    fileName: string;
+    sizeBytes: number;
+    uploadedAt: DateTimeString;
+    /** Этот файл сейчас прикреплён к журналу (последний применённый импорт) */
+    attached: boolean;
 };
 
 export type ImportChangeKind = "New" | "Changed" | "Unchanged";
@@ -132,8 +156,8 @@ export type ImportChangeDto = {
     taskId: Guid | null;
     taskNumber: number;
     kind: ImportChangeKind;
-    status: GradeStatus;
-    previousStatus: GradeStatus | null;
+    status: GradebookEntryTaskStatus;
+    previousStatus: GradebookEntryTaskStatus | null;
 };
 
 export type UnrecognizedRowDto = {
@@ -163,12 +187,17 @@ export type ImportPreviewDto = {
     errors: string[];
 };
 
+/** studentId null — пропустить строку */
+export type RowMappingRequest = {
+    row: number;
+    studentId: Guid | null;
+};
+
 export type ApplyImportRequest = {
     confirmLessonMismatch: boolean;
     createMissingTasks: boolean;
     publish: boolean;
-    /** Ручные сопоставления нераспознанных строк; studentId null — пропустить */
-    rowMappings: { row: number; studentId: Guid | null }[];
+    rowMappings: RowMappingRequest[];
 };
 
 export type ImportResultDto = {
@@ -178,30 +207,19 @@ export type ImportResultDto = {
     published: boolean;
 };
 
-export type AddStudentRequest = {
-    firstName: string;
-    middleName: string | null;
-    lastName: string;
-    grade: string | null;
-};
-
-export async function listTeacherGroups(): Promise<TeacherGroupDto[]> {
-    const response = await api.get<TeacherGroupDto[]>("/teacher/groups");
+export async function listTeacherGroups(): Promise<TeacherGroupCardDto[]> {
+    const response = await api.get<TeacherGroupCardDto[]>("/teacher/groups");
     return response.data;
 }
 
-export async function getTeacherGroup(
-    id: Guid,
-): Promise<TeacherGroupDetailsDto> {
-    const response = await api.get<TeacherGroupDetailsDto>(
-        `/teacher/groups/${id}`,
-    );
+export async function getTeacherGroup(id: Guid): Promise<TeacherGroupDto> {
+    const response = await api.get<TeacherGroupDto>(`/teacher/groups/${id}`);
     return response.data;
 }
 
 export async function addGroupStudent(
     groupId: Guid,
-    request: AddStudentRequest,
+    request: NewStudentRequest,
 ): Promise<StudentDto> {
     const response = await api.post<StudentDto>(
         `/teacher/groups/${groupId}/students`,
@@ -217,8 +235,8 @@ export async function removeGroupStudent(
     await api.delete(`/teacher/groups/${groupId}/students/${studentId}`);
 }
 
-export async function listLessons(groupId: Guid): Promise<LessonListItemDto[]> {
-    const response = await api.get<LessonListItemDto[]>(
+export async function listLessons(groupId: Guid): Promise<LessonSummaryDto[]> {
+    const response = await api.get<LessonSummaryDto[]>(
         `/teacher/groups/${groupId}/lessons`,
     );
     return response.data;
@@ -268,7 +286,7 @@ export async function addTask(
 ): Promise<LessonDto> {
     const response = await api.post<LessonDto>(
         `/teacher/lessons/${lessonId}/tasks`,
-        { title },
+        { title } satisfies TaskTitleRequest,
     );
     return response.data;
 }
@@ -280,7 +298,7 @@ export async function renameTask(
 ): Promise<LessonDto> {
     const response = await api.put<LessonDto>(
         `/teacher/lessons/${lessonId}/tasks/${taskId}`,
-        { title },
+        { title } satisfies TaskTitleRequest,
     );
     return response.data;
 }
@@ -304,11 +322,11 @@ export async function getGradebook(lessonId: Guid): Promise<GradebookDto> {
 
 export async function saveGradebook(
     lessonId: Guid,
-    changes: GradebookChangeDto[],
+    changes: GradebookCellChange[],
 ): Promise<GradebookDto> {
     const response = await api.put<GradebookDto>(
         `/teacher/lessons/${lessonId}/gradebook`,
-        { changes },
+        { changes } satisfies SaveGradebookRequest,
     );
     return response.data;
 }

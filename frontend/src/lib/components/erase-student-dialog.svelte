@@ -3,7 +3,7 @@
     import {
         eraseStudent,
         getErasurePreview,
-        type AdminStudentDetailsDto,
+        type StudentDetailsDto,
         type ErasurePreviewDto,
     } from "$lib/api/admin";
     import { errorMessage } from "$lib/api/client";
@@ -24,7 +24,7 @@
         onErased,
     }: {
         open?: boolean;
-        student: AdminStudentDetailsDto;
+        student: StudentDetailsDto;
         onErased: () => Promise<void> | void;
     } = $props();
 

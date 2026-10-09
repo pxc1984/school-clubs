@@ -3,7 +3,7 @@
     import {
         createGroup,
         updateGroup,
-        type AdminGroupDetailsDto,
+        type GroupDetailsDto,
     } from "$lib/api/admin";
     import { errorMessage, fieldErrors } from "$lib/api/client";
     import { Button } from "$lib/components/ui/button";
@@ -21,8 +21,8 @@
     }: {
         open?: boolean;
         /** null — новая группа */
-        group?: AdminGroupDetailsDto | null;
-        onSaved: (group: AdminGroupDetailsDto) => Promise<void> | void;
+        group?: GroupDetailsDto | null;
+        onSaved: (group: GroupDetailsDto) => Promise<void> | void;
     } = $props();
 
     let title = $state("");

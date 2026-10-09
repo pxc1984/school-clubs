@@ -5,11 +5,11 @@
         addAdminGroupStudents,
         listStudents,
         parseNames,
-        type AdminStudentDto,
-        type NewStudentRequest,
+        type StudentListItemDto,
         type ParsedNameDto,
     } from "$lib/api/admin";
     import { errorMessage } from "$lib/api/client";
+    import type { NewStudentRequest } from "$lib/api/types";
     import SearchPicker from "$lib/components/search-picker.svelte";
     import { Badge } from "$lib/components/ui/badge";
     import { Button } from "$lib/components/ui/button";
@@ -37,7 +37,7 @@
     const NAMES_PLACEHOLDER = "Иванов Пётр Сергеевич 7Б\nПетрова Анна";
 
     let tab = $state("search");
-    let picked = $state<AdminStudentDto[]>([]);
+    let picked = $state<StudentListItemDto[]>([]);
     let text = $state("");
     let parsed = $state<ParsedNameDto[] | null>(null);
     /** line → "new" | "skip" | studentId */
@@ -53,7 +53,7 @@
         choices = {};
     });
 
-    function togglePick(student: AdminStudentDto) {
+    function togglePick(student: StudentListItemDto) {
         picked = picked.some((p) => p.id === student.id)
             ? picked.filter((p) => p.id !== student.id)
             : [...picked, student];

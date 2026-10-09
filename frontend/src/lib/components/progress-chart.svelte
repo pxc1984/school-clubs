@@ -1,8 +1,8 @@
 <script lang="ts">
-    import type { SeriesPointDto } from "$lib/api/parent";
+    import type { ChartPointDto } from "$lib/api/parent";
     import { formatDate, formatPercent, formatShortDate } from "$lib/format";
 
-    let { series }: { series: SeriesPointDto[] } = $props();
+    let { series }: { series: ChartPointDto[] } = $props();
 
     const HEIGHT = 220;
     const PAD = { top: 12, right: 12, bottom: 28, left: 36 };

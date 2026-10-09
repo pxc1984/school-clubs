@@ -13,7 +13,7 @@
         setUserBlocked,
         setUserRoles,
         unlinkChild,
-        type AdminUserDetailsDto,
+        type UserDetailsDto,
     } from "$lib/api/admin";
     import { errorMessage } from "$lib/api/client";
     import type { StudentDto, UserRole } from "$lib/api/types";
@@ -45,7 +45,7 @@
         onChanged: () => Promise<void> | void;
     } = $props();
 
-    let user = $state<AdminUserDetailsDto | null>(null);
+    let user = $state<UserDetailsDto | null>(null);
     let loadError = $state<string | null>(null);
     let roles = $state<UserRole[]>([]);
     let busy = $state(false);
@@ -72,7 +72,7 @@
     );
 
     /** Применить ответ сервера и обновить список */
-    async function updated(next: AdminUserDetailsDto) {
+    async function updated(next: UserDetailsDto) {
         user = next;
         roles = [...next.roles];
         await onChanged();

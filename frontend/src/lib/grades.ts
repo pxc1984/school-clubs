@@ -1,7 +1,7 @@
-import type { GradeStatus } from "$lib/api/types";
+import type { GradebookEntryTaskStatus } from "$lib/api/types";
 
 export type GradeInfo = {
-    status: GradeStatus;
+    status: GradebookEntryTaskStatus;
     /** Символ из трафарета: цвет не единственный носитель смысла */
     symbol: string;
     label: string;
@@ -10,7 +10,7 @@ export type GradeInfo = {
     className: string;
 };
 
-export const GRADES: Record<GradeStatus, GradeInfo> = {
+export const GRADES: Record<GradebookEntryTaskStatus, GradeInfo> = {
     Solved: {
         status: "Solved",
         symbol: "+",
@@ -42,7 +42,7 @@ export const GRADES: Record<GradeStatus, GradeInfo> = {
 };
 
 /** Порядок клика по ячейке: пусто → + → +. → -. → - → пусто. */
-export const GRADE_CYCLE: (GradeStatus | null)[] = [
+export const GRADE_CYCLE: (GradebookEntryTaskStatus | null)[] = [
     null,
     "Solved",
     "SolvedWithRemarks",
@@ -51,19 +51,23 @@ export const GRADE_CYCLE: (GradeStatus | null)[] = [
 ];
 
 export const GRADE_LIST: GradeInfo[] = GRADE_CYCLE.filter(
-    (status): status is GradeStatus => status !== null,
+    (status): status is GradebookEntryTaskStatus => status !== null,
 ).map((status) => GRADES[status]);
 
-export function nextGrade(status: GradeStatus | null): GradeStatus | null {
+export function nextGrade(
+    status: GradebookEntryTaskStatus | null,
+): GradebookEntryTaskStatus | null {
     const index = GRADE_CYCLE.indexOf(status);
     return GRADE_CYCLE[(index + 1) % GRADE_CYCLE.length];
 }
 
-export function gradeByKey(key: string): GradeStatus | null | undefined {
+export function gradeByKey(
+    key: string,
+): GradebookEntryTaskStatus | null | undefined {
     if (key === "0" || key === "Delete" || key === "Backspace") return null;
     return GRADE_LIST.find((grade) => grade.key === key)?.status;
 }
 
-export function isSolved(status: GradeStatus | null): boolean {
+export function isSolved(status: GradebookEntryTaskStatus | null): boolean {
     return status === "Solved" || status === "SolvedWithRemarks";
 }

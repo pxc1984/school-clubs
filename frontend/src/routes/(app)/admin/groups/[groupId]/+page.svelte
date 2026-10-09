@@ -11,10 +11,9 @@
         listUsers,
         removeAdminGroupStudent,
         removeGroupTeacher,
-        type UserRefDto,
     } from "$lib/api/admin";
     import { errorMessage } from "$lib/api/client";
-    import type { StudentDto } from "$lib/api/types";
+    import type { StudentDto, UserRefDto } from "$lib/api/types";
     import AddStudentsDialog from "$lib/components/add-students-dialog.svelte";
     import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
     import GroupDialog from "$lib/components/group-dialog.svelte";

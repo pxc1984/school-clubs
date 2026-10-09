@@ -7,11 +7,11 @@
         listStudents,
         rejectRequest,
         type AdminAccessRequestDto,
-        type AdminStudentDto,
-        type ApproveRequest,
+        type StudentListItemDto,
+        type ApproveAccessRequestRequest,
     } from "$lib/api/admin";
     import { errorMessage } from "$lib/api/client";
-    import type { Relation, StudentDto } from "$lib/api/types";
+    import type { ParentRelation, StudentDto } from "$lib/api/types";
     import RequestStatusBadge from "$lib/components/request-status-badge.svelte";
     import SearchPicker from "$lib/components/search-picker.svelte";
     import TextPromptDialog from "$lib/components/text-prompt-dialog.svelte";
@@ -23,7 +23,7 @@
     import { Spinner } from "$lib/components/ui/spinner";
     import { formatDateTime, fullName } from "$lib/format";
 
-    const RELATION_LABELS: Record<Relation, string> = {
+    const RELATION_LABELS: Record<ParentRelation, string> = {
         Mother: "мама",
         Father: "папа",
         Guardian: "опекун",
@@ -43,7 +43,7 @@
 
     /** id подсказки, «search» — найденный вручную, «new» — завести нового */
     let choice = $state("");
-    let found = $state<AdminStudentDto | null>(null);
+    let found = $state<StudentListItemDto | null>(null);
     let busy = $state(false);
     let rejectOpen = $state(false);
 
@@ -64,7 +64,7 @@
             : "",
     );
 
-    const approval = $derived.by((): ApproveRequest | null => {
+    const approval = $derived.by((): ApproveAccessRequestRequest | null => {
         if (!request) return null;
         if (choice === "new")
             return {

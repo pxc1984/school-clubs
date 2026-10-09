@@ -10,8 +10,8 @@
         listStudents,
         mergeStudents,
         updateStudent,
-        type AdminStudentDetailsDto,
-        type AdminStudentDto,
+        type StudentDetailsDto,
+        type StudentListItemDto,
     } from "$lib/api/admin";
     import { errorMessage } from "$lib/api/client";
     import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
@@ -43,7 +43,7 @@
         onRemoved: (targetId?: string) => Promise<void> | void;
     } = $props();
 
-    let student = $state<AdminStudentDetailsDto | null>(null);
+    let student = $state<StudentDetailsDto | null>(null);
     let loadError = $state<string | null>(null);
 
     $effect(() => {
@@ -62,7 +62,7 @@
     let deleteOpen = $state(false);
     let eraseOpen = $state(false);
     let mergeOpen = $state(false);
-    let mergeTarget = $state<AdminStudentDto | null>(null);
+    let mergeTarget = $state<StudentListItemDto | null>(null);
     let mergeConfirmOpen = $state(false);
 
     async function save(form: StudentForm) {
@@ -71,7 +71,7 @@
         await onChanged();
     }
 
-    function pickTarget(target: AdminStudentDto) {
+    function pickTarget(target: StudentListItemDto) {
         mergeTarget = target;
         mergeOpen = false;
         mergeConfirmOpen = true;

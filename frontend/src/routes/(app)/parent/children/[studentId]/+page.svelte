@@ -20,7 +20,7 @@
         fullName,
     } from "$lib/format";
     import { GRADES } from "$lib/grades";
-    import { BUCKET_LABELS, PERIODS, type PeriodKey } from "$lib/stats";
+    import { POSITION_LABELS, PERIODS, type PeriodKey } from "$lib/stats";
 
     let { data } = $props();
 
@@ -110,7 +110,7 @@
                 {#if summary.position}
                     <Badge>
                         <TrophyIcon />
-                        {BUCKET_LABELS[summary.position]}
+                        {POSITION_LABELS[summary.position]}
                     </Badge>
                 {/if}
                 {#if summary.perfectStreak}

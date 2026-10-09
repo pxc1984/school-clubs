@@ -1,5 +1,5 @@
-// Общие типы контрактов API. Когда бэкенд опубликует эндпоинты, их стоит
-// генерировать из /openapi/v1.json (openapi-typescript), а не писать руками.
+// Общие типы контрактов API. Имена и поля один в один со схемами /openapi/v1.json бэкенда;
+// типы конкретных разделов — в соседних модулях (auth, account, admin, parent, teacher).
 
 export type Guid = string;
 /** yyyy-MM-dd */
@@ -9,32 +9,47 @@ export type TimeOnly = string;
 /** ISO 8601 с часовым поясом */
 export type DateTimeString = string;
 
-export type UserRole = "Parent" | "Teacher" | "Admin";
-
-export type GradeStatus =
-    "Solved" | "SolvedWithRemarks" | "UnsolvedWithRemarks" | "Unsolved";
-
+/** Не схема API: ФИО в формах и запросах, отчество необязательно. */
 export type PersonName = {
+    lastName: string;
     firstName: string;
     middleName: string | null;
-    lastName: string;
 };
 
-export type StudentDto = PersonName & {
+export type UserRole = "Parent" | "Teacher" | "Admin";
+
+export type GradebookEntryTaskStatus =
+    "UnsolvedWithRemarks" | "Unsolved" | "SolvedWithRemarks" | "Solved";
+
+export type ParentRelation = "Mother" | "Father" | "Guardian" | "Other";
+
+export type AccessRequestStatus =
+    "Pending" | "Approved" | "Rejected" | "Cancelled";
+
+export type StudentDto = {
     id: Guid;
+    lastName: string;
+    firstName: string;
+    /** Пустая строка, если отчества нет */
+    middleName: string;
     grade: string | null;
 };
 
-export type GroupShortDto = {
-    id: Guid;
-    title: string;
+export type NewStudentRequest = PersonName & {
+    grade: string | null;
 };
 
-export type GroupRefDto = GroupShortDto & { isArchived: boolean };
-
-export type UserShortDto = PersonName & {
+export type GroupRefDto = {
     id: Guid;
-    email: string;
+    title: string;
+    isArchived: boolean;
+};
+
+export type UserRefDto = {
+    id: Guid;
+    lastName: string;
+    firstName: string;
+    middleName: string;
 };
 
 export type TaskDto = {
@@ -45,19 +60,14 @@ export type TaskDto = {
     entryCount: number;
 };
 
-export type AccessRequestStatus =
-    "Pending" | "Approved" | "Rejected" | "Cancelled";
-
-export type Relation = "Mother" | "Father" | "Guardian" | "Other";
-
 export type AccessRequestDto = {
     id: Guid;
     group: GroupRefDto;
+    childLastName: string;
     childFirstName: string;
     childMiddleName: string | null;
-    childLastName: string;
     grade: string | null;
-    relation: Relation;
+    relation: ParentRelation;
     comment: string | null;
     status: AccessRequestStatus;
     rejectReason: string | null;
