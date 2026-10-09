@@ -1,3 +1,5 @@
+using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Containers;
 using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
 
@@ -11,6 +13,11 @@ public class FunctionalTestSetup
     internal static DatabaseResetter? DbResetter { get; private set; }
 
     private static PostgreSqlContainer? _container;
+    private static IContainer? _s3;
+
+    internal const string S3AccessKey = "testadmin";
+    internal const string S3SecretKey = "testsecret";
+    private const int S3Port = 9000;
 
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
@@ -22,10 +29,21 @@ public class FunctionalTestSetup
             .WithCleanUp(true)
             .Build();
 
-        await _container.StartAsync();
+        // S3-совместимое хранилище для файлов журналов (как в docker-compose).
+        _s3 = new ContainerBuilder("rustfs/rustfs:1.0.1")
+            .WithEnvironment("RUSTFS_ACCESS_KEY", S3AccessKey)
+            .WithEnvironment("RUSTFS_SECRET_KEY", S3SecretKey)
+            .WithPortBinding(S3Port, true)
+            .WithWaitStrategy(Wait.ForUnixContainer()
+                .UntilHttpRequestIsSucceeded(request => request.ForPort(S3Port).ForPath("/health")))
+            .WithCleanUp(true)
+            .Build();
 
-        // создание клиента стартует хост, а с ним и ApplicationDbContextInitialiser (создание схемы)
-        Factory = new WebApiFactory(_container.GetConnectionString());
+        await Task.WhenAll(_container.StartAsync(), _s3.StartAsync());
+
+        // создание клиента стартует хост, а с ним и ApplicationDbContextInitialiser (создание схемы и бакета)
+        var s3Url = $"http://{_s3.Hostname}:{_s3.GetMappedPublicPort(S3Port)}";
+        Factory = new WebApiFactory(_container.GetConnectionString(), s3Url);
         Factory.CreateClient().Dispose();
         ScopeFactory = Factory.Services.GetRequiredService<IServiceScopeFactory>();
 
@@ -38,5 +56,6 @@ public class FunctionalTestSetup
         if (DbResetter is not null) await DbResetter.DisposeAsync();
         await Factory.DisposeAsync();
         if (_container is not null) await _container.DisposeAsync();
+        if (_s3 is not null) await _s3.DisposeAsync();
     }
 }

@@ -9,6 +9,7 @@
 
     <ItemGroup>
         <None Include="testcontainers.properties" CopyToOutputDirectory="PreserveNewest"/>
+        <None Include="Spreadsheets/Fixtures/**" CopyToOutputDirectory="PreserveNewest"/>
     </ItemGroup>
 
     <ItemGroup>

@@ -17,6 +17,7 @@ builder.AddWebServices();
 var app = builder.Build();
 
 await app.InitialiseDatabaseAsync();
+await app.InitialiseStorageAsync();
 
 app.UseForwardedHeaders();
 

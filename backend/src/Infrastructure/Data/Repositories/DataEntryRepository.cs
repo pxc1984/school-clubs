@@ -15,4 +15,13 @@ public class DataEntryRepository(DbContext dbContext) : Repository<DataEntry>(db
             d => d.Location.Bucket == location.Bucket && d.Location.Key == location.Key,
             cancellationToken);
     }
+
+    public async Task<IReadOnlyList<DataEntry>> ListByKeyPrefixAsync(string bucket,
+        string keyPrefix,
+        CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Where(d => d.Location.Bucket == bucket && d.Location.Key.StartsWith(keyPrefix))
+            .ToListAsync(cancellationToken);
+    }
 }

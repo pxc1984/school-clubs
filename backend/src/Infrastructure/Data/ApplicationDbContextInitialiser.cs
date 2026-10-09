@@ -16,6 +16,14 @@ public static class InitialiserExtensions
         await initialiser.InitialiseAsync();
         await initialiser.SeedAsync();
     }
+
+    /// <summary>Создаёт бакет, если это разрешено конфигурацией (<c>Storage:S3:CreateBucket</c>).</summary>
+    public static async Task InitialiseStorageAsync(this WebApplication app)
+    {
+        var options = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<Storage.S3Options>>();
+        if (options.Value.CreateBucket)
+            await app.Services.GetRequiredService<Storage.S3FileStorage>().EnsureBucketAsync();
+    }
 }
 
 public class ApplicationDbContextInitialiser(

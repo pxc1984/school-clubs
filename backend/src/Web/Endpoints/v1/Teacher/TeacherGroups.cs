@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using SchoolClubs.Application.Services.Admin;
 using SchoolClubs.Application.Services.Common;
+using SchoolClubs.Application.Services.GradebookImport;
 using SchoolClubs.Application.Services.Lessons;
 using SchoolClubs.Application.Services.TeacherGroups;
 
@@ -17,6 +18,7 @@ public static class TeacherGroups
         group.MapPost("/{id:guid}/lessons", CreateLesson);
         group.MapPost("/{id:guid}/students", AddStudent);
         group.MapDelete("/{id:guid}/students/{studentId:guid}", RemoveStudent);
+        group.MapGet("/{id:guid}/gradebook-template", Template);
     }
 
     [EndpointSummary("My groups")]
@@ -75,5 +77,15 @@ public static class TeacherGroups
     {
         await service.RemoveStudentAsync(id, studentId, cancellationToken);
         return TypedResults.NoContent();
+    }
+
+    [EndpointSummary("Blank XLSX template of the group with N tasks")]
+    public static async Task<FileContentHttpResult> Template(IGradebookImportService service,
+        Guid id,
+        int? tasks,
+        CancellationToken cancellationToken)
+    {
+        var file = await service.GetGroupTemplateAsync(id, tasks ?? 1, cancellationToken);
+        return TypedResults.File(file.Content, file.ContentType, file.FileName);
     }
 }

@@ -7,6 +7,7 @@ using SchoolClubs.Application.Services.Account;
 using SchoolClubs.Application.Services.Admin;
 using SchoolClubs.Application.Services.Auth;
 using SchoolClubs.Application.Services.Gradebook;
+using SchoolClubs.Application.Services.GradebookImport;
 using SchoolClubs.Application.Services.Lessons;
 using SchoolClubs.Application.Services.TeacherGroups;
 using SchoolClubs.Application.Services.TodoItems;
@@ -34,5 +35,6 @@ public static class DependencyInjection
         builder.Services.AddScoped<ITeacherGroupService, TeacherGroupService>();
         builder.Services.AddScoped<ILessonService, LessonService>();
         builder.Services.AddScoped<IGradebookService, GradebookService>();
+        builder.Services.AddScoped<IGradebookImportService, GradebookImportService>();
     }
 }

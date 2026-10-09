@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using SchoolClubs.Application.Services.Gradebook;
+using SchoolClubs.Application.Services.GradebookImport;
 using SchoolClubs.Application.Services.Lessons;
 
 namespace SchoolClubs.Web.Endpoints.v1.Teacher;
@@ -20,6 +21,13 @@ public static class TeacherLessons
         group.MapPut("/{id:guid}/gradebook", SaveGradebook);
         group.MapPost("/{id:guid}/gradebook/publish", Publish);
         group.MapPost("/{id:guid}/gradebook/unpublish", Unpublish);
+
+        group.MapGet("/{id:guid}/gradebook/template", Template);
+        // Мультипарт с нашим CSRF-заголовком; встроенный antiforgery-токен SPA не использует.
+        group.MapPost("/{id:guid}/gradebook/import", Import).DisableAntiforgery();
+        group.MapPost("/{id:guid}/gradebook/import/{uploadId:guid}/apply", ApplyImport);
+        group.MapGet("/{id:guid}/gradebook/imports", ListImports);
+        group.MapGet("/{id:guid}/gradebook/imports/{uploadId:guid}/file", DownloadImport);
     }
 
     [EndpointSummary("Lesson with tasks")]
@@ -100,5 +108,50 @@ public static class TeacherLessons
         CancellationToken cancellationToken)
     {
         return await service.UnpublishAsync(id, cancellationToken);
+    }
+
+    [EndpointSummary("XLSX template of the lesson")]
+    public static async Task<FileContentHttpResult> Template(IGradebookImportService service, Guid id,
+        CancellationToken cancellationToken)
+    {
+        var file = await service.GetLessonTemplateAsync(id, cancellationToken);
+        return TypedResults.File(file.Content, file.ContentType, file.FileName);
+    }
+
+    [EndpointSummary("Upload XLSX and preview the import (phase 1)")]
+    public static async Task<ImportPreviewDto> Import(IGradebookImportService service,
+        Guid id,
+        IFormFile file,
+        CancellationToken cancellationToken)
+    {
+        await using var content = file.OpenReadStream();
+        return await service.PreviewAsync(id, file.FileName, content, cancellationToken);
+    }
+
+    [EndpointSummary("Apply uploaded XLSX (phase 2)")]
+    public static async Task<ImportResultDto> ApplyImport(IGradebookImportService service,
+        Guid id,
+        Guid uploadId,
+        ApplyImportRequest request,
+        CancellationToken cancellationToken)
+    {
+        return await service.ApplyAsync(id, uploadId, request, cancellationToken);
+    }
+
+    [EndpointSummary("Uploaded XLSX files of the lesson")]
+    public static async Task<IReadOnlyList<ImportFileDto>> ListImports(IGradebookImportService service, Guid id,
+        CancellationToken cancellationToken)
+    {
+        return await service.ListImportsAsync(id, cancellationToken);
+    }
+
+    [EndpointSummary("Download an uploaded XLSX file")]
+    public static async Task<FileContentHttpResult> DownloadImport(IGradebookImportService service,
+        Guid id,
+        Guid uploadId,
+        CancellationToken cancellationToken)
+    {
+        var file = await service.DownloadImportAsync(id, uploadId, cancellationToken);
+        return TypedResults.File(file.Content, file.ContentType, file.FileName);
     }
 }
