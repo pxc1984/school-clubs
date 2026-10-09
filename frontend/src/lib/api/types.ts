@@ -39,6 +39,8 @@ export type TaskDto = {
     id: Guid;
     order: number;
     title: string | null;
+    /** Сколько отметок удалится вместе с задачей */
+    entryCount: number;
 };
 
 export type AccessRequestStatus =

@@ -1,4 +1,4 @@
-import type { DateOnly, TimeOnly } from "$lib/api/types";
+import type { DateOnly, TimeOnly, UserRole } from "$lib/api/types";
 
 /** У /auth/me части имени могут быть null */
 type NameLike = {
@@ -125,3 +125,9 @@ export function countOf(
 ): string {
     return `${count} ${plural(count, forms)}`;
 }
+
+export const ROLE_LABELS: Record<UserRole, string> = {
+    Parent: "Родитель",
+    Teacher: "Учитель",
+    Admin: "Администратор",
+};

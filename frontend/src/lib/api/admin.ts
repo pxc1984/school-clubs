@@ -35,29 +35,46 @@ export type ApproveRequest =
     | { studentId: Guid; newStudent: null }
     | { studentId: null; newStudent: NewStudentRequest };
 
+export type UserRefDto = PersonName & { id: Guid };
+
+export type GroupRefDto = GroupShortDto & { isArchived: boolean };
+
 export type AdminGroupDto = GroupShortDto & {
     description: string | null;
     isArchived: boolean;
+    teachers: UserRefDto[];
     studentCount: number;
-    teachers: UserShortDto[];
 };
 
-export type AdminGroupDetailsDto = AdminGroupDto & {
+export type AdminGroupDetailsDto = GroupShortDto & {
+    description: string | null;
+    isArchived: boolean;
+    teachers: UserRefDto[];
     students: StudentDto[];
 };
 
-export type SaveGroupRequest = {
+export type CreateGroupRequest = {
     title: string;
     description: string | null;
+};
+
+export type UpdateGroupRequest = CreateGroupRequest & {
     isArchived: boolean;
 };
 
-export type AdminUserDto = UserShortDto & {
+export type AdminUserDto = PersonName & {
+    id: Guid;
+    email: string;
     phone: string | null;
     roles: UserRole[];
     isBlocked: boolean;
+};
+
+export type AdminUserDetailsDto = AdminUserDto & {
+    consentAcceptedAt: DateTimeString | null;
+    loginProviders: string[];
     children: StudentDto[];
-    groups: GroupShortDto[];
+    groups: GroupRefDto[];
 };
 
 export type InviteTeacherRequest = PersonName & {
@@ -65,8 +82,35 @@ export type InviteTeacherRequest = PersonName & {
 };
 
 export type AdminStudentDto = StudentDto & {
-    groups: GroupShortDto[];
-    parents: UserShortDto[];
+    groups: GroupRefDto[];
+};
+
+export type AdminStudentDetailsDto = AdminStudentDto & {
+    parents: UserRefDto[];
+    gradebookEntryCount: number;
+};
+
+export type CreateStudentRequest = NewStudentRequest & {
+    groupId: Guid | null;
+};
+
+/** Строка вставленного списка ФИО */
+export type ParsedNameDto = {
+    /** С 1 */
+    line: number;
+    source: string;
+    /** null — строку не разобрать, см. error */
+    student: NewStudentRequest | null;
+    error: string | null;
+    /** Уже существующие ученики с теми же фамилией и именем */
+    matches: StudentDto[];
+};
+
+export type MergeStudentsResultDto = {
+    targetId: Guid;
+    movedEntries: number;
+    /** Отметки дубля, у цели уже была отметка по той же задаче */
+    droppedEntries: number;
 };
 
 export type ErasurePreviewDto = {
@@ -113,8 +157,12 @@ export async function rejectRequest(id: Guid, reason: string): Promise<void> {
 
 // --- группы
 
-export async function listAdminGroups(): Promise<AdminGroupDto[]> {
-    const response = await api.get<AdminGroupDto[]>("/admin/groups");
+export async function listAdminGroups(
+    includeArchived = false,
+): Promise<AdminGroupDto[]> {
+    const response = await api.get<AdminGroupDto[]>("/admin/groups", {
+        params: { includeArchived: includeArchived || undefined },
+    });
     return response.data;
 }
 
@@ -124,35 +172,49 @@ export async function getAdminGroup(id: Guid): Promise<AdminGroupDetailsDto> {
 }
 
 export async function createGroup(
-    request: SaveGroupRequest,
-): Promise<AdminGroupDto> {
-    const response = await api.post<AdminGroupDto>("/admin/groups", request);
+    request: CreateGroupRequest,
+): Promise<AdminGroupDetailsDto> {
+    const response = await api.post<AdminGroupDetailsDto>(
+        "/admin/groups",
+        request,
+    );
     return response.data;
 }
 
 export async function updateGroup(
     id: Guid,
-    request: SaveGroupRequest,
-): Promise<AdminGroupDto> {
-    const response = await api.put<AdminGroupDto>(
+    request: UpdateGroupRequest,
+): Promise<AdminGroupDetailsDto> {
+    const response = await api.put<AdminGroupDetailsDto>(
         `/admin/groups/${id}`,
         request,
     );
     return response.data;
 }
 
+/** Только группу без занятий */
+export async function deleteGroup(id: Guid): Promise<void> {
+    await api.delete(`/admin/groups/${id}`);
+}
+
 export async function addGroupTeacher(
     groupId: Guid,
     teacherId: Guid,
-): Promise<void> {
-    await api.post(`/admin/groups/${groupId}/teachers/${teacherId}`);
+): Promise<AdminGroupDetailsDto> {
+    const response = await api.post<AdminGroupDetailsDto>(
+        `/admin/groups/${groupId}/teachers/${teacherId}`,
+    );
+    return response.data;
 }
 
 export async function removeGroupTeacher(
     groupId: Guid,
     teacherId: Guid,
-): Promise<void> {
-    await api.delete(`/admin/groups/${groupId}/teachers/${teacherId}`);
+): Promise<AdminGroupDetailsDto> {
+    const response = await api.delete<AdminGroupDetailsDto>(
+        `/admin/groups/${groupId}/teachers/${teacherId}`,
+    );
+    return response.data;
 }
 
 /** Существующих учеников — по id, новых (в т.ч. массовая вставка) — списком ФИО. */
@@ -160,103 +222,164 @@ export async function addAdminGroupStudents(
     groupId: Guid,
     studentIds: Guid[],
     newStudents: NewStudentRequest[],
-): Promise<void> {
-    await api.post(`/admin/groups/${groupId}/students`, {
-        studentIds,
-        newStudents,
-    });
+): Promise<AdminGroupDetailsDto> {
+    const response = await api.post<AdminGroupDetailsDto>(
+        `/admin/groups/${groupId}/students`,
+        { studentIds, newStudents },
+    );
+    return response.data;
 }
 
+/** Отметки ученика остаются */
 export async function removeAdminGroupStudent(
     groupId: Guid,
     studentId: Guid,
-): Promise<void> {
-    await api.delete(`/admin/groups/${groupId}/students`, {
-        data: { studentIds: [studentId] },
-    });
+): Promise<AdminGroupDetailsDto> {
+    const response = await api.delete<AdminGroupDetailsDto>(
+        `/admin/groups/${groupId}/students/${studentId}`,
+    );
+    return response.data;
 }
 
 // --- пользователи
 
 export async function listUsers(
-    search: string,
+    q: string,
     role: UserRole | null = null,
 ): Promise<AdminUserDto[]> {
     const response = await api.get<AdminUserDto[]>("/admin/users", {
-        params: { search: search || undefined, role: role ?? undefined },
+        params: { q: q || undefined, role: role ?? undefined },
     });
     return response.data;
 }
 
-export async function setUserRoles(id: Guid, roles: UserRole[]): Promise<void> {
-    await api.put(`/admin/users/${id}/roles`, { roles });
+export async function getUser(id: Guid): Promise<AdminUserDetailsDto> {
+    const response = await api.get<AdminUserDetailsDto>(`/admin/users/${id}`);
+    return response.data;
 }
 
-export async function setUserBlocked(
+export async function setUserRoles(
     id: Guid,
-    blocked: boolean,
-): Promise<void> {
-    await api.post(`/admin/users/${id}/block`, { blocked });
-}
-
-export async function resetUserPassword(
-    id: Guid,
-): Promise<{ temporaryPassword: string }> {
-    const response = await api.post<{ temporaryPassword: string }>(
-        `/admin/users/${id}/reset-password`,
+    roles: UserRole[],
+): Promise<AdminUserDetailsDto> {
+    const response = await api.put<AdminUserDetailsDto>(
+        `/admin/users/${id}/roles`,
+        { roles },
     );
     return response.data;
 }
 
-export async function deleteUser(id: Guid): Promise<void> {
-    await api.delete(`/admin/users/${id}`);
+/** Блокировка завершает сессии пользователя */
+export async function setUserBlocked(
+    id: Guid,
+    blocked: boolean,
+): Promise<AdminUserDetailsDto> {
+    const response = await api.post<AdminUserDetailsDto>(
+        `/admin/users/${id}/${blocked ? "block" : "unblock"}`,
+    );
+    return response.data;
 }
 
+/** Временный пароль показывается один раз */
+export async function resetUserPassword(id: Guid): Promise<string> {
+    const response = await api.post<{ password: string }>(
+        `/admin/users/${id}/reset-password`,
+    );
+    return response.data.password;
+}
+
+/** Создать учителя по email или выдать роль существующему пользователю */
 export async function inviteTeacher(
     request: InviteTeacherRequest,
-): Promise<void> {
-    await api.post("/admin/teachers/invite", request);
+): Promise<AdminUserDetailsDto> {
+    const response = await api.post<AdminUserDetailsDto>(
+        "/admin/teachers/invite",
+        request,
+    );
+    return response.data;
+}
+
+export async function linkChild(
+    parentId: Guid,
+    studentId: Guid,
+): Promise<AdminUserDetailsDto> {
+    const response = await api.post<AdminUserDetailsDto>(
+        `/admin/parents/${parentId}/children/${studentId}`,
+    );
+    return response.data;
 }
 
 export async function unlinkChild(
     parentId: Guid,
     studentId: Guid,
-): Promise<void> {
-    await api.delete(`/admin/parents/${parentId}/children/${studentId}`);
+): Promise<AdminUserDetailsDto> {
+    const response = await api.delete<AdminUserDetailsDto>(
+        `/admin/parents/${parentId}/children/${studentId}`,
+    );
+    return response.data;
 }
 
 // --- ученики
 
-export async function listStudents(search: string): Promise<AdminStudentDto[]> {
+export async function listStudents(
+    q: string,
+    groupId: Guid | null = null,
+): Promise<AdminStudentDto[]> {
     const response = await api.get<AdminStudentDto[]>("/admin/students", {
-        params: { search: search || undefined },
+        params: { q: q || undefined, groupId: groupId ?? undefined },
     });
     return response.data;
 }
 
+export async function getStudent(id: Guid): Promise<AdminStudentDetailsDto> {
+    const response = await api.get<AdminStudentDetailsDto>(
+        `/admin/students/${id}`,
+    );
+    return response.data;
+}
+
 export async function createStudent(
-    request: NewStudentRequest,
-): Promise<StudentDto> {
-    const response = await api.post<StudentDto>("/admin/students", request);
+    request: CreateStudentRequest,
+): Promise<AdminStudentDetailsDto> {
+    const response = await api.post<AdminStudentDetailsDto>(
+        "/admin/students",
+        request,
+    );
     return response.data;
 }
 
 export async function updateStudent(
     id: Guid,
     request: NewStudentRequest,
-): Promise<StudentDto> {
-    const response = await api.put<StudentDto>(
+): Promise<AdminStudentDetailsDto> {
+    const response = await api.put<AdminStudentDetailsDto>(
         `/admin/students/${id}`,
         request,
     );
     return response.data;
 }
 
+/** Только ученика без отметок; с отметками — удаление ПДн */
+export async function deleteStudent(id: Guid): Promise<void> {
+    await api.delete(`/admin/students/${id}`);
+}
+
 export async function mergeStudents(
     sourceId: Guid,
     targetId: Guid,
-): Promise<void> {
-    await api.post(`/admin/students/${sourceId}/merge-into/${targetId}`);
+): Promise<MergeStudentsResultDto> {
+    const response = await api.post<MergeStudentsResultDto>(
+        `/admin/students/${sourceId}/merge-into/${targetId}`,
+    );
+    return response.data;
+}
+
+export async function parseNames(text: string): Promise<ParsedNameDto[]> {
+    const response = await api.post<ParsedNameDto[]>(
+        "/admin/students/parse-names",
+        { text },
+    );
+    return response.data;
 }
 
 export async function getErasurePreview(id: Guid): Promise<ErasurePreviewDto> {

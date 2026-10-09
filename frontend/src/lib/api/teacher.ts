@@ -9,51 +9,54 @@ import type {
     TimeOnly,
 } from "$lib/api/types";
 
-export type LessonRefDto = {
-    id: Guid;
-    date: DateOnly;
-    time: TimeOnly | null;
-};
-
 export type TeacherGroupDto = {
     id: Guid;
     title: string;
     description: string | null;
     studentCount: number;
-    nextLesson: LessonRefDto | null;
-    lastLesson: LessonRefDto | null;
-    /** Прошедшие занятия без отметок или с неполными строками */
-    unfilledGradebooks: number;
+    lastLessonDate: DateOnly | null;
+    nextLessonDate: DateOnly | null;
+    /** Прошедшие занятия (включая сегодня) с неполностью заполненным журналом */
+    unfilledLessonCount: number;
+};
+
+export type LessonListItemDto = {
+    id: Guid;
+    date: DateOnly;
+    time: TimeOnly | null;
+    topic: string | null;
+    taskCount: number;
+    /** Доля заполненных ячеек для текущего состава, 0–100 */
+    filledPercent: number;
+    isPublished: boolean;
 };
 
 export type TeacherGroupDetailsDto = {
     id: Guid;
     title: string;
     description: string | null;
+    isArchived: boolean;
     students: StudentDto[];
+    lessons: LessonListItemDto[];
 };
 
-export type LessonListItemDto = LessonRefDto & {
-    topic: string | null;
-    taskCount: number;
-    /** Заполненность журнала 0..100 */
-    filledPercent: number;
-    entryCount: number;
-    isPublished: boolean;
-};
-
-export type LessonDto = LessonRefDto & {
+export type LessonDto = {
+    id: Guid;
     groupId: Guid;
     groupTitle: string;
+    date: DateOnly;
+    time: TimeOnly | null;
     topic: string | null;
     tasks: TaskDto[];
+    publishedAt: DateTimeString | null;
 };
 
 export type CreateLessonRequest = {
     date: DateOnly;
     time: TimeOnly | null;
     topic: string | null;
-    taskCount: number;
+    /** null — как в последнем занятии группы */
+    taskCount: number | null;
 };
 
 export type UpdateLessonRequest = {
@@ -61,6 +64,9 @@ export type UpdateLessonRequest = {
     time: TimeOnly | null;
     topic: string | null;
 };
+
+/** inGroup false — выбывший ученик, у которого остались отметки */
+export type GradebookStudentDto = StudentDto & { inGroup: boolean };
 
 export type GradebookEntryDto = {
     studentId: Guid;
@@ -78,27 +84,41 @@ export type ImportFileDto = {
 
 export type GradebookDto = {
     lessonId: Guid;
+    date: DateOnly;
+    topic: string | null;
     publishedAt: DateTimeString | null;
-    students: StudentDto[];
     tasks: TaskDto[];
+    students: GradebookStudentDto[];
     entries: GradebookEntryDto[];
-    imports: ImportFileDto[];
+    /** Загруженные XLSX — появятся с импортом */
+    imports?: ImportFileDto[];
 };
 
 export type GradebookChangeDto = {
     studentId: Guid;
     taskId: Guid;
-    /** null — удалить отметку */
+    /** null — очистить ячейку */
     status: GradeStatus | null;
+    /** Ячейка задаётся целиком: null убирает комментарий */
     comment: string | null;
 };
 
-export type GroupSummaryDto = {
-    lessons: (LessonRefDto & { topic: string | null })[];
-    rows: {
-        student: StudentDto;
-        /** Балл 0..1 по занятиям в порядке lessons; null — не был */
-        scores: (number | null)[];
+export type GroupMatrixDto = {
+    lessons: {
+        id: Guid;
+        date: DateOnly;
+        topic: string | null;
+        taskCount: number;
+        isPublished: boolean;
+    }[];
+    students: GradebookStudentDto[];
+    /** Ячейка есть, только если у ученика есть отметки на занятии */
+    cells: {
+        studentId: Guid;
+        lessonId: Guid;
+        marked: number;
+        /** Решено, в том числе с замечаниями */
+        solved: number;
     }[];
 };
 
@@ -215,8 +235,8 @@ export async function createLesson(
     return response.data;
 }
 
-export async function getGroupSummary(groupId: Guid): Promise<GroupSummaryDto> {
-    const response = await api.get<GroupSummaryDto>(
+export async function getGroupSummary(groupId: Guid): Promise<GroupMatrixDto> {
+    const response = await api.get<GroupMatrixDto>(
         `/teacher/groups/${groupId}/summary`,
     );
     return response.data;
@@ -245,8 +265,8 @@ export async function deleteLesson(id: Guid): Promise<void> {
 export async function addTask(
     lessonId: Guid,
     title: string | null,
-): Promise<TaskDto> {
-    const response = await api.post<TaskDto>(
+): Promise<LessonDto> {
+    const response = await api.post<LessonDto>(
         `/teacher/lessons/${lessonId}/tasks`,
         { title },
     );
@@ -257,16 +277,22 @@ export async function renameTask(
     lessonId: Guid,
     taskId: Guid,
     title: string | null,
-): Promise<TaskDto> {
-    const response = await api.put<TaskDto>(
+): Promise<LessonDto> {
+    const response = await api.put<LessonDto>(
         `/teacher/lessons/${lessonId}/tasks/${taskId}`,
         { title },
     );
     return response.data;
 }
 
-export async function deleteTask(lessonId: Guid, taskId: Guid): Promise<void> {
-    await api.delete(`/teacher/lessons/${lessonId}/tasks/${taskId}`);
+export async function deleteTask(
+    lessonId: Guid,
+    taskId: Guid,
+): Promise<LessonDto> {
+    const response = await api.delete<LessonDto>(
+        `/teacher/lessons/${lessonId}/tasks/${taskId}`,
+    );
+    return response.data;
 }
 
 export async function getGradebook(lessonId: Guid): Promise<GradebookDto> {
@@ -279,18 +305,28 @@ export async function getGradebook(lessonId: Guid): Promise<GradebookDto> {
 export async function saveGradebook(
     lessonId: Guid,
     changes: GradebookChangeDto[],
-): Promise<void> {
-    await api.put(`/teacher/lessons/${lessonId}/gradebook`, {
-        entries: changes,
-    });
+): Promise<GradebookDto> {
+    const response = await api.put<GradebookDto>(
+        `/teacher/lessons/${lessonId}/gradebook`,
+        { changes },
+    );
+    return response.data;
 }
 
-export async function publishGradebook(lessonId: Guid): Promise<void> {
-    await api.post(`/teacher/lessons/${lessonId}/gradebook/publish`);
+export async function publishGradebook(lessonId: Guid): Promise<GradebookDto> {
+    const response = await api.post<GradebookDto>(
+        `/teacher/lessons/${lessonId}/gradebook/publish`,
+    );
+    return response.data;
 }
 
-export async function unpublishGradebook(lessonId: Guid): Promise<void> {
-    await api.post(`/teacher/lessons/${lessonId}/gradebook/unpublish`);
+export async function unpublishGradebook(
+    lessonId: Guid,
+): Promise<GradebookDto> {
+    const response = await api.post<GradebookDto>(
+        `/teacher/lessons/${lessonId}/gradebook/unpublish`,
+    );
+    return response.data;
 }
 
 export function lessonTemplateUrl(lessonId: Guid): string {
