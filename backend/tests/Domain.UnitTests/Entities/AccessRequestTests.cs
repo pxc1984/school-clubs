@@ -57,6 +57,14 @@ public class AccessRequestTests
         Should.Throw<AccessRequestStateException>(() => request.Approve(new Student("Пётр"), Now));
     }
 
+    [TestCase(Gender.Female, ParentRelation.Mother)]
+    [TestCase(Gender.Male, ParentRelation.Father)]
+    [TestCase(null, null)]
+    public void RelationFromGender(Gender? gender, ParentRelation? expected)
+    {
+        ParentRelations.FromGender(gender).ShouldBe(expected);
+    }
+
     [Test]
     public void Cancel_IsFinal()
     {

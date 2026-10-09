@@ -50,6 +50,7 @@ public class UpdateAccountRequestValidator : AbstractValidator<UpdateAccountRequ
         RuleFor(r => r.FirstName).NameRules().NotEmpty();
         RuleFor(r => r.LastName).NameRules().NotEmpty();
         RuleFor(r => r.MiddleName).NameRules();
+        RuleFor(r => r.Gender).IsInEnum();
         RuleFor(r => r.Phone)
             .MaximumLength(32)
             .Must(phone => string.IsNullOrWhiteSpace(phone) || new PhoneAttribute().IsValid(phone.Trim()))

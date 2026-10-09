@@ -107,7 +107,8 @@ export type CreateAccessRequestRequest = {
     childFirstName: string;
     childMiddleName: string | null;
     grade: string | null;
-    relation: ParentRelation;
+    /** null — мама или папа по полу из профиля; без пола в профиле — 400 */
+    relation: ParentRelation | null;
     comment: string | null;
     /** Чекбокс «Я законный представитель и согласен на обработку данных ребёнка» */
     acceptChildDataConsent: boolean;

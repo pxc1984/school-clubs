@@ -35,6 +35,20 @@ public class AccountEndpointTests : TestBase
     }
 
     [Test]
+    public async Task Update_SetsAndClearsGender()
+    {
+        var (client, _) = await LoginAsAsync(UserRole.Parent);
+
+        var set = await client.PutAsJsonAsync(Account,
+            new UpdateAccountRequest("Мария", "Петрова", null, null, Gender.Female));
+        (await set.Content.ReadFromJsonAsync<AccountDto>())!.Gender.ShouldBe(Gender.Female);
+        (await client.GetFromJsonAsync<AccountDto>(Account))!.Gender.ShouldBe(Gender.Female);
+
+        var cleared = await client.PutAsJsonAsync(Account, new UpdateAccountRequest("Мария", "Петрова", null, null));
+        (await cleared.Content.ReadFromJsonAsync<AccountDto>())!.Gender.ShouldBeNull();
+    }
+
+    [Test]
     public async Task ChangePassword_RequiresCurrent_KeepsCurrentSession_EndsOthers()
     {
         var (client, user) = await LoginAsAsync(UserRole.Parent);

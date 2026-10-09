@@ -57,6 +57,7 @@ public record ServiceAdminLoginRequest(string Password);
 /// <param name="EmailVerified">Провайдер ручается за email — только тогда по нему можно найти существующий аккаунт.</param>
 /// <param name="Username">Claim <c>preferred_username</c> (ник в Telegram, логин в Яндексе).</param>
 /// <param name="PictureUrl">Claim <c>picture</c> — ссылка на аватарку у провайдера.</param>
+/// <param name="Gender">Claim <c>gender</c> (<c>male</c>/<c>female</c>); у Яндекс ID — поле <c>sex</c>.</param>
 public record ExternalIdentity(
     string Provider,
     string Subject,
@@ -66,4 +67,5 @@ public record ExternalIdentity(
     string? LastName,
     string? MiddleName,
     string? Username = null,
-    string? PictureUrl = null);
+    string? PictureUrl = null,
+    Gender? Gender = null);

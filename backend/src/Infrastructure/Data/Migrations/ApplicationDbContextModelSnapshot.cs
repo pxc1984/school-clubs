@@ -656,6 +656,11 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                         .HasColumnType("character varying(254)")
                         .HasColumnName("email");
 
+                    b.Property<string>("Gender")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("gender");
+
                     b.Property<bool>("IsBlocked")
                         .HasColumnType("boolean")
                         .HasColumnName("is_blocked");

@@ -39,6 +39,11 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .Property(u => u.Phone)
             .HasColumnName("phone")
             .HasMaxLength(32);
+        builder
+            .Property(u => u.Gender)
+            .HasColumnName("gender")
+            .HasConversion<string>()
+            .HasMaxLength(16);
 
         builder
             .Property(u => u.SecurityStamp)

@@ -32,7 +32,7 @@ public class AccountService(
         var providers = (await logins.ListByUserAsync(user.Id, cancellationToken)).Select(l => l.Provider).ToList();
 
         return new AccountDto(user.Id, user.FirstName, user.MiddleName, user.LastName, user.Email.Address,
-            user.Username, user.Phone, user.AvatarId, user.Roles.Order().ToList(), providers);
+            user.Username, user.Phone, user.Gender, user.AvatarId, user.Roles.Order().ToList(), providers);
     }
 
     public async Task<AccountDto> UpdateAsync(UpdateAccountRequest request,
@@ -43,6 +43,7 @@ public class AccountService(
         var user = await GetCurrentUserAsync();
         user.Rename(request.FirstName.Trim(), NullIfBlank(request.MiddleName), request.LastName.Trim());
         user.ChangePhone(NullIfBlank(request.Phone));
+        user.ChangeGender(request.Gender);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return await GetAsync(cancellationToken);
     }

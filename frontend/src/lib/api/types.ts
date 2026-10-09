@@ -26,6 +26,9 @@ export type AttendanceStatus = "Absent" | "Late";
 
 export type ParentRelation = "Mother" | "Father" | "Guardian" | "Other";
 
+/** null в профиле — пол не указан */
+export type Gender = "Male" | "Female";
+
 export type AccessRequestStatus =
     "Pending" | "Approved" | "Rejected" | "Cancelled";
 

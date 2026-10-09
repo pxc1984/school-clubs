@@ -25,6 +25,20 @@ public enum ParentRelation
     Other,
 }
 
+public static class ParentRelations
+{
+    /// <summary>Мама или папа по полу родителя; пол не указан — <c>null</c>.</summary>
+    public static ParentRelation? FromGender(Gender? gender)
+    {
+        return gender switch
+        {
+            Gender.Female => ParentRelation.Mother,
+            Gender.Male => ParentRelation.Father,
+            _ => null,
+        };
+    }
+}
+
 /// <summary>
 /// Запрос родителя на доступ к отметкам ребёнка. Родитель не знает id ученика, поэтому описывает ребёнка
 /// словами, а сопоставляет с учеником админ при одобрении. Из <see cref="AccessRequestStatus.Pending"/>

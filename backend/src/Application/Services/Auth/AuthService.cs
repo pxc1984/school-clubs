@@ -89,6 +89,7 @@ public class AuthService(
             var linked = await users.FindByIdAsync(login.UserId) ?? throw new UnauthorizedAccessException();
             await FillMissingEmailAsync(linked, identity, cancellationToken);
             await FillMissingUsernameAsync(linked, identity, cancellationToken);
+            FillMissingGender(linked, identity);
             return await CompleteLoginAsync(linked, login, cancellationToken);
         }
 
@@ -106,6 +107,7 @@ public class AuthService(
         }
 
         await FillMissingUsernameAsync(user, identity, cancellationToken);
+        FillMissingGender(user, identity);
         // Только при первой привязке провайдера: удалённая пользователем аватарка не вернётся при следующем входе.
         if (user.AvatarId is null && identity.PictureUrl is { } pictureUrl)
             await avatars.TryImportAsync(user, pictureUrl, cancellationToken);
@@ -134,6 +136,7 @@ public class AuthService(
 
         await FillMissingEmailAsync(user, identity, cancellationToken);
         await FillMissingUsernameAsync(user, identity, cancellationToken);
+        FillMissingGender(user, identity);
         if (user.AvatarId is null && identity.PictureUrl is { } pictureUrl)
             await avatars.TryImportAsync(user, pictureUrl, cancellationToken);
 
@@ -213,6 +216,13 @@ public class AuthService(
             return;
 
         user.ChangeUsername(username);
+    }
+
+    /// <summary>Пол провайдера достаётся пользователю без пола; выбранный пользователем не перезаписываем.</summary>
+    private static void FillMissingGender(User user, ExternalIdentity identity)
+    {
+        if (user.Gender is null && identity.Gender is { } gender)
+            user.ChangeGender(gender);
     }
 
     private async Task<SessionDto> CompleteLoginAsync(User user, UserLogin login, CancellationToken cancellationToken)

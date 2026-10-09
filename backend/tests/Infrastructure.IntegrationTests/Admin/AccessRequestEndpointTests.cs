@@ -50,9 +50,9 @@ public class AccessRequestEndpointTests : TestBase
     }
 
     private static CreateAccessRequestRequest Request(Guid groupId, string lastName = "Иванов",
-        string firstName = "Пётр", bool consent = true)
+        string firstName = "Пётр", bool consent = true, ParentRelation? relation = ParentRelation.Mother)
     {
-        return new CreateAccessRequestRequest(groupId, lastName, firstName, null, "7б", ParentRelation.Mother,
+        return new CreateAccessRequestRequest(groupId, lastName, firstName, null, "7б", relation,
             "Ходит по вторникам", consent);
     }
 
@@ -94,6 +94,31 @@ public class AccessRequestEndpointTests : TestBase
             await CreateAsync(Request(_group.Id, "Ребёнок", $"Имя{i}"));
         (await _parent.PostAsJsonAsync($"{Parent}/access-requests", Request(_group.Id, "Ещё", "Один")))
             .StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Test]
+    public async Task Create_WithoutRelation_TakesItFromParentGender()
+    {
+        // Пол не указан — спросить, кем приходится, обязательно.
+        (await _parent.PostAsJsonAsync($"{Parent}/access-requests", Request(_group.Id, relation: null)))
+            .StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+
+        await SetParentGenderAsync(Gender.Male);
+        (await CreateAsync(Request(_group.Id, relation: null))).Relation.ShouldBe(ParentRelation.Father);
+
+        // Явно выбранное (опекун) важнее пола.
+        (await CreateAsync(Request(_group.Id, "Иванова", "Анна", relation: ParentRelation.Guardian)))
+            .Relation.ShouldBe(ParentRelation.Guardian);
+    }
+
+    private async Task SetParentGenderAsync(Gender gender)
+    {
+        await InScope(async sp =>
+        {
+            var user = await sp.GetRequiredService<IUserRepository>().FindByIdAsync(_parentUser.Id);
+            user!.ChangeGender(gender);
+            await sp.GetRequiredService<IUnitOfWork>().SaveChangesAsync();
+        });
     }
 
     [Test]

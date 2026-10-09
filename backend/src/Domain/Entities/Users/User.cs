@@ -48,6 +48,12 @@ public class User : Profile
     }
     public string? Phone { get; private set; }
 
+    /// <summary>
+    /// Пол; <c>null</c> — не указан. Подтягивается из внешнего провайдера (Яндекс ID), если не задан.
+    /// По нему в запросе доступа понятно, мама или папа, — не нужно спрашивать.
+    /// </summary>
+    public Gender? Gender { get; private set; }
+
     public const int UsernameMinLength = 3;
     public const int UsernameMaxLength = 32;
 
@@ -112,6 +118,15 @@ public class User : Profile
             throw new ArgumentException("invalid phone number passed", nameof(phone));
 
         Phone = phone;
+    }
+
+    /// <param name="gender"><c>null</c> — не указан.</param>
+    public void ChangeGender(Gender? gender)
+    {
+        if (gender is { } value && !Enum.IsDefined(value))
+            throw new ArgumentOutOfRangeException(nameof(gender), gender, "unknown gender");
+
+        Gender = gender;
     }
 
     /// <param name="username"><c>null</c> или пустая строка — убрать ник.</param>

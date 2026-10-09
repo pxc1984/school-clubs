@@ -10,6 +10,7 @@ public record AccountDto(
     string Email,
     string? Username,
     string? Phone,
+    Gender? Gender,
     Guid? AvatarId,
     IReadOnlyList<UserRole> Roles,
     IReadOnlyList<string> LoginProviders);
@@ -17,7 +18,13 @@ public record AccountDto(
 /// <param name="Accept">Чекбокс «Согласен с политикой обработки персональных данных».</param>
 public record AcceptConsentRequest(bool Accept);
 
-public record UpdateAccountRequest(string FirstName, string LastName, string? MiddleName, string? Phone);
+/// <param name="Gender"><c>null</c> — не указан.</param>
+public record UpdateAccountRequest(
+    string FirstName,
+    string LastName,
+    string? MiddleName,
+    string? Phone,
+    Gender? Gender = null);
 
 /// <param name="CurrentPassword"><c>null</c>, если пароля ещё нет (вход только через внешний провайдер).</param>
 public record ChangePasswordRequest(string? CurrentPassword, string NewPassword);

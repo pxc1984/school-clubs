@@ -18,6 +18,7 @@
         uploadAvatar,
     } from "$lib/api/account";
     import { errorMessage, fieldErrors, statusOf } from "$lib/api/client";
+    import type { Gender } from "$lib/api/types";
     import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
     import * as Avatar from "$lib/components/ui/avatar";
     import PageHeader from "$lib/components/page-header.svelte";
@@ -25,6 +26,7 @@
     import { Button } from "$lib/components/ui/button";
     import * as Field from "$lib/components/ui/field";
     import { Input } from "$lib/components/ui/input";
+    import * as NativeSelect from "$lib/components/ui/native-select";
     import { Separator } from "$lib/components/ui/separator";
     import { Spinner } from "$lib/components/ui/spinner";
     import { initials } from "$lib/format";
@@ -43,6 +45,7 @@
         firstName: "",
         middleName: "",
         phone: "",
+        gender: "" as Gender | "",
     });
     $effect.pre(() => {
         if (!account) return;
@@ -51,6 +54,7 @@
             firstName: account.firstName,
             middleName: account.middleName ?? "",
             phone: account.phone ?? "",
+            gender: account.gender ?? "",
         };
     });
     let profileErrors = $state<Record<string, string>>({});
@@ -66,6 +70,7 @@
                 firstName: profile.firstName.trim(),
                 middleName: profile.middleName.trim() || null,
                 phone: profile.phone.trim() || null,
+                gender: profile.gender || null,
             });
             await Promise.all([invalidateAll(), session.load(true)]);
             toast.success("Профиль сохранён");
@@ -290,6 +295,29 @@
                             bind:value={profile.phone}
                         />
                         <Field.Error>{profileErrors.phone}</Field.Error>
+                    </Field.Field>
+                    <Field.Field data-invalid={!!profileErrors.gender}>
+                        <Field.Label for="gender">Пол</Field.Label>
+                        <NativeSelect.Root
+                            id="gender"
+                            class="w-full"
+                            bind:value={profile.gender}
+                        >
+                            <NativeSelect.Option value="">
+                                Не указан
+                            </NativeSelect.Option>
+                            <NativeSelect.Option value="Female">
+                                Женский
+                            </NativeSelect.Option>
+                            <NativeSelect.Option value="Male">
+                                Мужской
+                            </NativeSelect.Option>
+                        </NativeSelect.Root>
+                        <Field.Description>
+                            Тогда в запросе доступа не нужно указывать, мама вы
+                            или папа. Подтягивается из Яндекс ID.
+                        </Field.Description>
+                        <Field.Error>{profileErrors.gender}</Field.Error>
                     </Field.Field>
                 </Field.Group>
                 <div>

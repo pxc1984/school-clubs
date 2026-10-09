@@ -7,6 +7,9 @@ namespace SchoolClubs.Application.Services.AccessRequests;
 /// <summary>Активная группа для формы запроса — без состава.</summary>
 public record ParentGroupDto(Guid Id, string Title, string? Description);
 
+/// <param name="Relation">
+/// <c>null</c> — мама или папа по полу из профиля; если пол не указан, обязателен.
+/// </param>
 /// <param name="AcceptChildDataConsent">Чекбокс «Я законный представитель и согласен на обработку данных ребёнка».</param>
 public record CreateAccessRequestRequest(
     Guid GroupId,
@@ -14,7 +17,7 @@ public record CreateAccessRequestRequest(
     string ChildFirstName,
     string? ChildMiddleName,
     string? Grade,
-    ParentRelation Relation,
+    ParentRelation? Relation,
     string? Comment,
     bool AcceptChildDataConsent);
 

@@ -31,6 +31,17 @@
 
     let { data } = $props();
 
+    // по полу из профиля понятно, мама или папа, — спрашиваем, только если это не так
+    const relationFromGender = $derived<ParentRelation | null>(
+        data.gender === "Female"
+            ? "Mother"
+            : data.gender === "Male"
+              ? "Father"
+              : null,
+    );
+    let relationOverridden = $state(false);
+    const askRelation = $derived(!relationFromGender || relationOverridden);
+
     const pendingCount = $derived(
         data.requests.filter((r) => r.status === "Pending").length,
     );
@@ -62,7 +73,8 @@
         if (!form.groupId) result.groupId = "Выберите кружок";
         if (!form.lastName.trim()) result.childLastName = "Укажите фамилию";
         if (!form.firstName.trim()) result.childFirstName = "Укажите имя";
-        if (!form.relation) result.relation = "Укажите, кем приходитесь";
+        if (askRelation && !form.relation)
+            result.relation = "Укажите, кем приходитесь";
         if (!form.consent)
             result.acceptChildDataConsent = "Без согласия запрос не отправить";
         return result;
@@ -81,11 +93,14 @@
                 childFirstName: form.firstName.trim(),
                 childMiddleName: form.middleName.trim() || null,
                 grade: form.grade.trim() || null,
-                relation: form.relation as ParentRelation,
+                relation: askRelation
+                    ? (form.relation as ParentRelation)
+                    : null,
                 comment: form.comment.trim() || null,
                 acceptChildDataConsent: form.consent,
             });
             form = emptyForm();
+            relationOverridden = false;
             await invalidateAll();
             toast.success("Запрос отправлен", {
                 description: "Администратор проверит его и откроет доступ.",
@@ -181,32 +196,53 @@
                     </Field.Group>
                 </Field.Set>
 
-                <Field.Set data-invalid={!!errors.relation}>
-                    <Field.Legend variant="label">Кем приходитесь</Field.Legend>
-                    <RadioGroup.Root
-                        bind:value={form.relation}
-                        class="flex flex-wrap gap-4"
-                    >
-                        {#each RELATIONS as relation (relation.value)}
-                            <Field.Field
-                                orientation="horizontal"
-                                class="w-auto"
+                {#if !askRelation}
+                    <Field.Field>
+                        <Field.Title>Кем приходитесь</Field.Title>
+                        <Field.Description>
+                            {relationFromGender === "Mother" ? "Мама" : "Папа"} —
+                            по полу в
+                            <a href="/account" class="underline">профиле</a>.
+                            <Button
+                                variant="link"
+                                size="xs"
+                                class="h-auto p-0"
+                                onclick={() => (relationOverridden = true)}
                             >
-                                <RadioGroup.Item
-                                    value={relation.value}
-                                    id="relation-{relation.value}"
-                                />
-                                <Field.Label
-                                    for="relation-{relation.value}"
-                                    class="font-normal"
+                                Я опекун или другое
+                            </Button>
+                        </Field.Description>
+                    </Field.Field>
+                {:else}
+                    <Field.Set data-invalid={!!errors.relation}>
+                        <Field.Legend variant="label"
+                            >Кем приходитесь</Field.Legend
+                        >
+                        <RadioGroup.Root
+                            bind:value={form.relation}
+                            class="flex flex-wrap gap-4"
+                        >
+                            {#each RELATIONS as relation (relation.value)}
+                                <Field.Field
+                                    orientation="horizontal"
+                                    class="w-auto"
                                 >
-                                    {relation.label}
-                                </Field.Label>
-                            </Field.Field>
-                        {/each}
-                    </RadioGroup.Root>
-                    <Field.Error>{errors.relation}</Field.Error>
-                </Field.Set>
+                                    <RadioGroup.Item
+                                        value={relation.value}
+                                        id="relation-{relation.value}"
+                                    />
+                                    <Field.Label
+                                        for="relation-{relation.value}"
+                                        class="font-normal"
+                                    >
+                                        {relation.label}
+                                    </Field.Label>
+                                </Field.Field>
+                            {/each}
+                        </RadioGroup.Root>
+                        <Field.Error>{errors.relation}</Field.Error>
+                    </Field.Set>
+                {/if}
 
                 <Field.Field>
                     <Field.Label for="comment">Комментарий</Field.Label>

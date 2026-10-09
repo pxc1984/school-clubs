@@ -1,4 +1,5 @@
 using FluentValidation;
+using FluentValidation.Results;
 using SchoolClubs.Application.Common.Interfaces;
 using SchoolClubs.Application.Services.Common;
 using SchoolClubs.Domain.Abstractions;
@@ -39,6 +40,10 @@ public class AccessRequestService(
 
         var userId = CurrentUserId();
         var parent = await users.FindByIdAsync(userId) ?? throw new UnauthorizedAccessException();
+        var relation = request.Relation ?? ParentRelations.FromGender(parent.Gender)
+            ?? throw new ValidationException([
+                new ValidationFailure(nameof(CreateAccessRequestRequest.Relation), "Укажите, кем приходитесь ребёнку."),
+            ]);
         var group = await groups.FindByIdAsync(request.GroupId);
         if (group is null || group.IsArchived)
             throw new ArgumentException("group isn't available for requests", nameof(request.GroupId));
@@ -50,7 +55,7 @@ public class AccessRequestService(
             throw new ArgumentException("the same request is already pending");
 
         var accessRequest = new AccessRequest(parent, group.Id, request.ChildLastName, request.ChildFirstName,
-            request.ChildMiddleName, request.Grade, request.Relation, request.Comment, timeProvider.GetUtcNow());
+            request.ChildMiddleName, request.Grade, relation, request.Comment, timeProvider.GetUtcNow());
         await requests.AddAsync(accessRequest, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return ToDto(accessRequest, group.ToRef());

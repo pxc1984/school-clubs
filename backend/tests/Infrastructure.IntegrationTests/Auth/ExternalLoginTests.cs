@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SchoolClubs.Application.Services.Auth;
 using SchoolClubs.Domain.Abstractions;
 using SchoolClubs.Domain.Entities.Users;
+using SchoolClubs.Web.Infrastructure.Auth;
 
 namespace SchoolClubs.Infrastructure.IntegrationTests.Auth;
 
@@ -12,10 +13,11 @@ public class ExternalLoginTests : TestBase
         string? email = null,
         bool verified = false,
         string? username = null,
-        string? pictureUrl = null)
+        string? pictureUrl = null,
+        Gender? gender = null)
     {
         return new ExternalIdentity("yandex", subject, email, verified, "Анна", "Иванова", null, username,
-            pictureUrl);
+            pictureUrl, gender);
     }
 
     private static Task<SessionDto> LoginAsync(ExternalIdentity identity)
@@ -99,6 +101,32 @@ public class ExternalLoginTests : TestBase
 
         await LoginAsync(Identity("tg-4", username: "renamed"));
         (await FindUserAsync(session)).Username.ShouldBe("anna");
+    }
+
+    [Test]
+    public async Task ProviderGender_FillsMissing_ButKeepsOwn()
+    {
+        var session = await LoginAsync(Identity("ya-g-1"));
+        (await FindUserAsync(session)).Gender.ShouldBeNull();
+
+        await LoginAsync(Identity("ya-g-1", gender: Gender.Female));
+        (await FindUserAsync(session)).Gender.ShouldBe(Gender.Female);
+
+        await LoginAsync(Identity("ya-g-1", gender: Gender.Male));
+        (await FindUserAsync(session)).Gender.ShouldBe(Gender.Female);
+
+        var created = await LoginAsync(Identity("ya-g-2", gender: Gender.Male));
+        (await FindUserAsync(created)).Gender.ShouldBe(Gender.Male);
+    }
+
+    [TestCase("female", Gender.Female)]
+    [TestCase("Male", Gender.Male)]
+    [TestCase(null, null)]
+    [TestCase("", null)]
+    [TestCase("other", null)]
+    public void ParseGender_AcceptsOnlyMaleAndFemale(string? value, Gender? expected)
+    {
+        OidcProviderRegistry.ParseGender(value).ShouldBe(expected);
     }
 
     private static async Task<User> FindUserAsync(SessionDto session)

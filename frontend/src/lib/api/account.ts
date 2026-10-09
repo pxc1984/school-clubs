@@ -1,5 +1,5 @@
 import { api, apiUrl } from "$lib/api/client";
-import type { Guid, PersonName, UserRole } from "$lib/api/types";
+import type { Gender, Guid, PersonName, UserRole } from "$lib/api/types";
 
 export type AccountDto = {
     id: Guid;
@@ -10,6 +10,8 @@ export type AccountDto = {
     /** без "@", в нижнем регистре; подтягивается из Telegram/Яндекса, если не задан */
     username: string | null;
     phone: string | null;
+    /** null — не указан; подтягивается из Яндекс ID, если не задан */
+    gender: Gender | null;
     avatarId: Guid | null;
     roles: UserRole[];
     /** "password" и имена внешних провайдеров ("yandex") */
@@ -18,6 +20,8 @@ export type AccountDto = {
 
 export type UpdateAccountRequest = PersonName & {
     phone: string | null;
+    /** null — не указан */
+    gender: Gender | null;
 };
 
 export type ChangePasswordRequest = {

@@ -17,6 +17,18 @@ public class UserTests
     }
 
     [Test]
+    public void ChangeGender_SetsClearsAndRejectsUnknown()
+    {
+        var user = new User();
+
+        user.ChangeGender(Gender.Female);
+        user.Gender.ShouldBe(Gender.Female);
+        user.ChangeGender(null);
+        user.Gender.ShouldBeNull();
+        Should.Throw<ArgumentOutOfRangeException>(() => user.ChangeGender((Gender)42));
+    }
+
+    [Test]
     public void Rename_WithMultiPartName_Throws()
     {
         var user = new User("Иван");

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using SchoolClubs.Application.Services.Auth;
+using SchoolClubs.Domain.Entities.Users;
 
 namespace SchoolClubs.Web.Infrastructure.Auth;
 
@@ -45,7 +46,7 @@ public class OidcProviderOptions
 
     /// <summary>
     /// OAuth 2.0: стандартный клейм (<c>sub</c>, <c>email</c>, <c>email_verified</c>, <c>given_name</c>,
-    /// <c>family_name</c>, <c>middle_name</c>, <c>preferred_username</c>, <c>picture</c>) → JSON-ключ ответа <see cref="UserInfoEndpoint"/>.
+    /// <c>family_name</c>, <c>middle_name</c>, <c>preferred_username</c>, <c>picture</c>, <c>gender</c>) → JSON-ключ ответа <see cref="UserInfoEndpoint"/>.
     /// </summary>
     public Dictionary<string, string> ClaimKeys { get; set; } = new();
 
@@ -166,7 +167,19 @@ public class OidcProviderRegistry
             principal.FindFirstValue("family_name"),
             principal.FindFirstValue("middle_name"),
             principal.FindFirstValue("preferred_username"),
-            principal.FindFirstValue("picture"));
+            principal.FindFirstValue("picture"),
+            ParseGender(principal.FindFirstValue("gender")));
+    }
+
+    /// <summary>Значения claim <c>gender</c> по OIDC Core: <c>male</c>/<c>female</c>; прочее — не указан.</summary>
+    public static Gender? ParseGender(string? value)
+    {
+        return value?.Trim().ToLowerInvariant() switch
+        {
+            "male" => Gender.Male,
+            "female" => Gender.Female,
+            _ => null,
+        };
     }
 }
 
