@@ -19,7 +19,7 @@ public class User : Profile
     public User(string? firstName = null,
         string? middleName = null,
         string? lastName = null,
-        string email = "invalid@school218.ru",
+        string email = NoEmail,
         string? phone = null,
         IList<UserRole>? roles = null) : base(firstName, middleName, lastName)
     {
@@ -36,7 +36,15 @@ public class User : Profile
     {
     }
 
+    /// <summary>Заглушка для аккаунтов без почты (вход через провайдер, не отдавший подтверждённый адрес).</summary>
+    public const string NoEmail = "invalid@school218.ru";
+
     public MailAddress Email { get; private set; } = null!;
+
+    public bool HasEmail
+    {
+        get { return Email.Address != NoEmail; }
+    }
     public string? Phone { get; private set; }
 
     public IReadOnlyCollection<UserRole> Roles

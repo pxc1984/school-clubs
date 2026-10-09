@@ -56,4 +56,20 @@ public class ExternalLoginTests : TestBase
         session.UserId.ShouldNotBe(teacher.Id);
         session.Roles.ShouldBe([UserRole.Parent]);
     }
+
+    [Test]
+    public async Task LinkedAccountWithoutEmail_GetsVerifiedEmailOnNextLogin_UnlessTaken()
+    {
+        var first = await LoginAsync(Identity("ya-4", "anna@yandex.ru", verified: false));
+        await LoginAsync(Identity("ya-4", "anna@yandex.ru", verified: true));
+        var filled = await InScope(sp => sp.GetRequiredService<IUserRepository>().FindByIdAsync(first.UserId!.Value));
+        filled!.HasEmail.ShouldBeTrue();
+        filled.Email.Address.ShouldBe("anna@yandex.ru");
+
+        await CreateUserAsync("taken@school218.ru", [UserRole.Teacher]);
+        var other = await LoginAsync(Identity("ya-5"));
+        await LoginAsync(Identity("ya-5", "taken@school218.ru", verified: true));
+        var untouched = await InScope(sp => sp.GetRequiredService<IUserRepository>().FindByIdAsync(other.UserId!.Value));
+        untouched!.HasEmail.ShouldBeFalse();
+    }
 }

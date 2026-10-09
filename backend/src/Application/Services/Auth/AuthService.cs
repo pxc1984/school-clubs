@@ -85,11 +85,11 @@ public class AuthService(
         if (login is not null)
         {
             var linked = await users.FindByIdAsync(login.UserId) ?? throw new UnauthorizedAccessException();
+            await FillMissingEmailAsync(linked, identity, cancellationToken);
             return await CompleteLoginAsync(linked, login, cancellationToken);
         }
 
-        // Неподтверждённому email не верим: иначе через провайдер с чужим адресом можно войти в чужой аккаунт.
-        var email = identity.EmailVerified && IsValidEmail(identity.Email) ? identity.Email!.Trim() : null;
+        var email = TrustedEmail(identity);
         var user = email is null ? null : await users.FindByEmailAsync(email, cancellationToken);
         if (user is null)
         {
@@ -141,6 +141,26 @@ public class AuthService(
         var user = await users.FindByIdAsync(userId) ?? throw new UnauthorizedAccessException();
         return new MeDto(user.Id, user.FirstName, user.MiddleName, user.LastName, user.Email.Address,
             user.Roles.Order().ToList(), IsConsentRequired(user), false);
+    }
+
+    /// <summary>Неподтверждённому email не верим: иначе через провайдер с чужим адресом можно войти в чужой аккаунт.</summary>
+    private static string? TrustedEmail(ExternalIdentity identity)
+    {
+        return identity.EmailVerified && IsValidEmail(identity.Email) ? identity.Email!.Trim() : null;
+    }
+
+    /// <summary>
+    /// Аккаунт без почты получает подтверждённый адрес провайдера при следующем входе — если адрес не занят
+    /// другим аккаунтом (чужие аккаунты по-тихому не сливаем).
+    /// </summary>
+    private async Task FillMissingEmailAsync(User user, ExternalIdentity identity, CancellationToken cancellationToken)
+    {
+        if (user.HasEmail || TrustedEmail(identity) is not { } email)
+            return;
+        if (await users.FindByEmailAsync(email, cancellationToken) is not null)
+            return;
+
+        user.ChangeEmail(email);
     }
 
     private async Task<SessionDto> CompleteLoginAsync(User user, UserLogin login, CancellationToken cancellationToken)
