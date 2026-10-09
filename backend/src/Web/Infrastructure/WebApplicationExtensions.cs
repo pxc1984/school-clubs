@@ -1,5 +1,6 @@
 using SchoolClubs.Web.Endpoints.v1.Account;
 using SchoolClubs.Web.Endpoints.v1.Admin;
+using SchoolClubs.Web.Endpoints.v1.Avatars;
 using SchoolClubs.Web.Endpoints.v1.Parent;
 using SchoolClubs.Web.Endpoints.v1.Teacher;
 using SchoolClubs.Web.Endpoints.v1.TodoItems;
@@ -26,6 +27,11 @@ public static class WebApplicationExtensions
             .MapGroup("/account")
             .RequireAuthorization(Policies.User)
             .WithTags("Account"));
+
+        Avatars.Map(v1
+            .MapGroup("/avatars")
+            .RequireAuthorization(Policies.Consent)
+            .WithTags("Avatars"));
 
         // Вход сервисного админа анонимный; остальные /admin/* — под политикой Admin.
         var admin = v1.MapGroup("/admin");

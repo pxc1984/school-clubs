@@ -13,6 +13,7 @@ using SchoolClubs.Infrastructure.Data;
 using SchoolClubs.Infrastructure.Data.Interceptors;
 using SchoolClubs.Infrastructure.Data.Queries;
 using SchoolClubs.Infrastructure.Data.Repositories;
+using SchoolClubs.Infrastructure.Http;
 using SchoolClubs.Infrastructure.Identity;
 using SchoolClubs.Infrastructure.Spreadsheets;
 using SchoolClubs.Infrastructure.Storage;
@@ -55,6 +56,9 @@ public static class DependencyInjection
         builder.Services.AddSingleton<IPasswordHasher, PasswordHasher>();
         builder.Services.AddSingleton<IGradebookSpreadsheet, ClosedXmlGradebookSpreadsheet>();
         builder.AddFileStorage();
+        // Аватарки провайдеров входа: картинки маленькие, ждать долго нет смысла.
+        builder.Services.AddHttpClient<IRemoteFileDownloader, RemoteFileDownloader>(client =>
+            client.Timeout = TimeSpan.FromSeconds(10));
 
         builder.Services.AddScoped<ApplicationDbContextInitialiser>();
     }

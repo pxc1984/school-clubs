@@ -8,6 +8,7 @@ export type MeDto = {
     middleName: string | null;
     lastName: string | null;
     email: string | null;
+    avatarId: Guid | null;
     roles: UserRole[];
     isServiceAdmin: boolean;
     /** Не принята текущая версия политики ПДн — пускаем только на /consent. */

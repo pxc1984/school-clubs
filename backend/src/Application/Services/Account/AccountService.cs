@@ -32,7 +32,7 @@ public class AccountService(
         var providers = (await logins.ListByUserAsync(user.Id, cancellationToken)).Select(l => l.Provider).ToList();
 
         return new AccountDto(user.Id, user.FirstName, user.MiddleName, user.LastName, user.Email.Address,
-            user.Username, user.Phone, user.Roles.Order().ToList(), providers);
+            user.Username, user.Phone, user.AvatarId, user.Roles.Order().ToList(), providers);
     }
 
     public async Task<AccountDto> UpdateAsync(UpdateAccountRequest request,

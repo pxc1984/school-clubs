@@ -6,6 +6,7 @@ using SchoolClubs.Application.Common.Exceptions;
 using SchoolClubs.Application.Common.Interfaces;
 using SchoolClubs.Application.Common.Options;
 using SchoolClubs.Application.Services.Auth;
+using SchoolClubs.Application.Services.Avatars;
 using SchoolClubs.Application.Validators;
 using SchoolClubs.Domain.Abstractions;
 using SchoolClubs.Domain.Entities.Users;
@@ -34,6 +35,7 @@ public class AuthServiceTests
             _logins.Object,
             Mock.Of<IUnitOfWork>(),
             _hasher.Object,
+            Mock.Of<IAvatarService>(),
             Mock.Of<ICurrentUser>(),
             Options.Create(_options),
             TimeProvider.System,

@@ -45,9 +45,18 @@ public class OidcProviderOptions
 
     /// <summary>
     /// OAuth 2.0: стандартный клейм (<c>sub</c>, <c>email</c>, <c>email_verified</c>, <c>given_name</c>,
-    /// <c>family_name</c>, <c>middle_name</c>, <c>preferred_username</c>) → JSON-ключ ответа <see cref="UserInfoEndpoint"/>.
+    /// <c>family_name</c>, <c>middle_name</c>, <c>preferred_username</c>, <c>picture</c>) → JSON-ключ ответа <see cref="UserInfoEndpoint"/>.
     /// </summary>
     public Dictionary<string, string> ClaimKeys { get; set; } = new();
+
+    /// <summary>
+    /// OAuth 2.0: провайдер отдаёт не ссылку на аватарку, а её id — ссылка собирается подстановкой
+    /// значения <c>picture</c> в <c>{0}</c> (Яндекс ID: <c>https://avatars.yandex.net/get-yapic/{0}/islands-200</c>).
+    /// </summary>
+    public string? PictureUrlTemplate { get; set; }
+
+    /// <summary>OAuth 2.0: JSON-ключ флага «аватарка не задана» (у Яндекс ID — <c>is_avatar_empty</c>).</summary>
+    public string? PictureEmptyKey { get; set; }
 
     public string? ClientId { get; set; }
     public string? ClientSecret { get; set; }
@@ -156,7 +165,8 @@ public class OidcProviderRegistry
             principal.FindFirstValue("given_name"),
             principal.FindFirstValue("family_name"),
             principal.FindFirstValue("middle_name"),
-            principal.FindFirstValue("preferred_username"));
+            principal.FindFirstValue("preferred_username"),
+            principal.FindFirstValue("picture"));
     }
 }
 
@@ -255,6 +265,26 @@ public static class OidcAuthenticationBuilderExtensions
         response.EnsureSuccessStatusCode();
         using var user = JsonDocument.Parse(await response.Content.ReadAsStringAsync(context.HttpContext.RequestAborted));
         context.RunClaimActions(user.RootElement);
+        NormalizePicture(context.Identity!, provider, user.RootElement);
+    }
+
+    /// <summary>Id аватарки → ссылка по <see cref="OidcProviderOptions.PictureUrlTemplate"/>; заглушку провайдера не берём.</summary>
+    private static void NormalizePicture(ClaimsIdentity identity, OidcProviderOptions provider, JsonElement user)
+    {
+        if (identity.FindFirst("picture") is not { } picture)
+            return;
+
+        var isEmpty = provider.PictureEmptyKey is { } emptyKey
+                      && user.TryGetProperty(emptyKey, out var flag)
+                      && flag.ValueKind == JsonValueKind.True;
+        identity.RemoveClaim(picture);
+        if (isEmpty || string.IsNullOrWhiteSpace(picture.Value))
+            return;
+
+        var url = string.IsNullOrEmpty(provider.PictureUrlTemplate)
+            ? picture.Value
+            : string.Format(provider.PictureUrlTemplate, Uri.EscapeDataString(picture.Value));
+        identity.AddClaim(new Claim("picture", url, ClaimValueTypes.String, picture.Issuer));
     }
 
     private static void ConfigureCookies(RemoteAuthenticationOptions options)

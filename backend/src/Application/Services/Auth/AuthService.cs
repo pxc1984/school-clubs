@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using SchoolClubs.Application.Common.Exceptions;
 using SchoolClubs.Application.Common.Interfaces;
 using SchoolClubs.Application.Common.Options;
+using SchoolClubs.Application.Services.Avatars;
 using SchoolClubs.Domain.Abstractions;
 using SchoolClubs.Domain.Entities.Users;
 using ValidationException = SchoolClubs.Application.Common.Exceptions.ValidationException;
@@ -16,6 +17,7 @@ public class AuthService(
     IUserLoginRepository logins,
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
+    IAvatarService avatars,
     ICurrentUser currentUser,
     IOptions<AuthOptions> options,
     TimeProvider timeProvider,
@@ -104,6 +106,9 @@ public class AuthService(
         }
 
         await FillMissingUsernameAsync(user, identity, cancellationToken);
+        // Только при первой привязке провайдера: удалённая пользователем аватарка не вернётся при следующем входе.
+        if (user.AvatarId is null && identity.PictureUrl is { } pictureUrl)
+            await avatars.TryImportAsync(user, pictureUrl, cancellationToken);
         login = UserLogin.ForExternal(user, identity.Provider, identity.Subject);
         await logins.AddAsync(login, cancellationToken);
         return await CompleteLoginAsync(user, login, cancellationToken);
@@ -142,7 +147,7 @@ public class AuthService(
 
         var user = await users.FindByIdAsync(userId) ?? throw new UnauthorizedAccessException();
         return new MeDto(user.Id, user.FirstName, user.MiddleName, user.LastName, user.Email.Address,
-            user.Roles.Order().ToList(), IsConsentRequired(user), false);
+            user.Roles.Order().ToList(), IsConsentRequired(user), false, user.AvatarId);
     }
 
     /// <summary>Неподтверждённому email не верим: иначе через провайдер с чужим адресом можно войти в чужой аккаунт.</summary>

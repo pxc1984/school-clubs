@@ -10,6 +10,7 @@ public record AccountDto(
     string Email,
     string? Username,
     string? Phone,
+    Guid? AvatarId,
     IReadOnlyList<UserRole> Roles,
     IReadOnlyList<string> LoginProviders);
 

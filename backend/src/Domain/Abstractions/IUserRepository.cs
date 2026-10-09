@@ -9,6 +9,9 @@ public interface IUserRepository : IRepository<User>
 
     Task<User?> FindByUsernameAsync(string username, CancellationToken cancellationToken = default);
 
+    /// <summary>Пользователь вместе с метаданными аватарки.</summary>
+    Task<User?> GetWithAvatarAsync(Guid id, CancellationToken cancellationToken = default);
+
     /// <summary>Пользователь вместе с детьми.</summary>
     Task<User?> GetWithChildrenAsync(Guid id, CancellationToken cancellationToken = default);
 

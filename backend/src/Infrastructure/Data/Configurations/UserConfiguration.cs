@@ -27,6 +27,15 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasIndex(u => u.Username).IsUnique();
 
         builder
+            .Property(u => u.AvatarId)
+            .HasColumnName("avatar_id");
+        builder
+            .HasOne(u => u.Avatar)
+            .WithMany()
+            .HasForeignKey(u => u.AvatarId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder
             .Property(u => u.Phone)
             .HasColumnName("phone")
             .HasMaxLength(32);

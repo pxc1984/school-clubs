@@ -188,7 +188,7 @@ public class AuthEndpointTests : TestBase
         var query = QueryHelpers.ParseQuery(location.Query);
         query["client_id"].ToString().ShouldBe("test-client");
         query["response_type"].ToString().ShouldBe("code");
-        query["scope"].ToString().ShouldBe("login:email login:info");
+        query["scope"].ToString().ShouldBe("login:email login:info login:avatar");
         query["redirect_uri"].ToString().ShouldBe("http://localhost/api/v1/auth/external/yandex/callback");
         query["code_challenge_method"].ToString().ShouldBe("S256");
         // Telegram отвергает длинный state: свойства лежат на сервере, в state — одноразовый ключ.

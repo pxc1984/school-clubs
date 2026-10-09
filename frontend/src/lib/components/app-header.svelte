@@ -7,6 +7,7 @@
     import { toggleMode } from "mode-watcher";
     import { goto } from "$app/navigation";
     import { page } from "$app/state";
+    import { avatarUrl } from "$lib/api/account";
     import { adminLogout, logout } from "$lib/api/auth";
     import { errorMessage } from "$lib/api/client";
     import * as Avatar from "$lib/components/ui/avatar";
@@ -72,6 +73,12 @@
                             aria-label="Меню пользователя"
                         >
                             <Avatar.Root class="size-8">
+                                {#if me?.avatarId}
+                                    <Avatar.Image
+                                        src={avatarUrl(me.avatarId)}
+                                        alt=""
+                                    />
+                                {/if}
                                 <Avatar.Fallback class="text-xs">
                                     {me && !me.isServiceAdmin
                                         ? initials(me)

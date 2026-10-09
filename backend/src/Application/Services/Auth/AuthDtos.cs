@@ -20,7 +20,8 @@ public record MeDto(
     string? Email,
     IReadOnlyList<UserRole> Roles,
     bool ConsentRequired,
-    bool IsServiceAdmin);
+    bool IsServiceAdmin,
+    Guid? AvatarId = null);
 
 /// <param name="AcceptPersonalDataPolicy">Чекбокс «Согласен с политикой обработки персональных данных».</param>
 public record RegisterRequest(
@@ -41,6 +42,7 @@ public record ServiceAdminLoginRequest(string Password);
 /// <param name="Subject">Claim <c>sub</c>.</param>
 /// <param name="EmailVerified">Провайдер ручается за email — только тогда по нему можно найти существующий аккаунт.</param>
 /// <param name="Username">Claim <c>preferred_username</c> (ник в Telegram, логин в Яндексе).</param>
+/// <param name="PictureUrl">Claim <c>picture</c> — ссылка на аватарку у провайдера.</param>
 public record ExternalIdentity(
     string Provider,
     string Subject,
@@ -49,4 +51,5 @@ public record ExternalIdentity(
     string? FirstName,
     string? LastName,
     string? MiddleName,
-    string? Username = null);
+    string? Username = null,
+    string? PictureUrl = null);

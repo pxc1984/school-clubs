@@ -11,9 +11,11 @@ public class ExternalLoginTests : TestBase
     private static ExternalIdentity Identity(string subject,
         string? email = null,
         bool verified = false,
-        string? username = null)
+        string? username = null,
+        string? pictureUrl = null)
     {
-        return new ExternalIdentity("yandex", subject, email, verified, "Анна", "Иванова", null, username);
+        return new ExternalIdentity("yandex", subject, email, verified, "Анна", "Иванова", null, username,
+            pictureUrl);
     }
 
     private static Task<SessionDto> LoginAsync(ExternalIdentity identity)
@@ -103,5 +105,26 @@ public class ExternalLoginTests : TestBase
     {
         var user = await InScope(sp => sp.GetRequiredService<IUserRepository>().FindByIdAsync(session.UserId!.Value));
         return user!;
+    }
+
+    [Test]
+    public async Task NewIdentity_ImportsProviderAvatar_OnlyOnFirstLink()
+    {
+        var session = await LoginAsync(Identity("ya-av-1", pictureUrl: FakeRemoteFileDownloader.PngUrl));
+        var user = await FindUserAsync(session);
+        user.AvatarId.ShouldNotBeNull();
+
+        // Пользователь удалил аватарку — повторный вход через тот же провайдер её не возвращает.
+        await InScope(async sp =>
+        {
+            var loaded = await sp.GetRequiredService<IUserRepository>().GetWithAvatarAsync(user.Id);
+            sp.GetRequiredService<IDataEntryRepository>().Remove(loaded!.ChangeAvatar(null)!);
+            await sp.GetRequiredService<IUnitOfWork>().SaveChangesAsync();
+        });
+        await LoginAsync(Identity("ya-av-1", pictureUrl: FakeRemoteFileDownloader.PngUrl));
+        (await FindUserAsync(session)).AvatarId.ShouldBeNull();
+
+        var broken = await LoginAsync(Identity("ya-av-2", pictureUrl: "https://avatars.test/missing.png"));
+        (await FindUserAsync(broken)).AvatarId.ShouldBeNull();
     }
 }

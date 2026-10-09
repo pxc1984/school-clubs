@@ -4,14 +4,20 @@
     import LinkIcon from "@lucide/svelte/icons/link";
     import { invalidateAll } from "$app/navigation";
     import {
+        AVATAR_ACCEPT,
+        AVATAR_MAX_BYTES,
+        avatarUrl,
         changePassword,
         changeUsername,
+        deleteAvatar,
         unlinkProvider,
         updateAccount,
+        uploadAvatar,
     } from "$lib/api/account";
     import { externalLoginUrl } from "$lib/api/auth";
     import { errorMessage, fieldErrors, statusOf } from "$lib/api/client";
     import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
+    import * as Avatar from "$lib/components/ui/avatar";
     import PageHeader from "$lib/components/page-header.svelte";
     import { Badge } from "$lib/components/ui/badge";
     import { Button } from "$lib/components/ui/button";
@@ -19,6 +25,7 @@
     import { Input } from "$lib/components/ui/input";
     import { Separator } from "$lib/components/ui/separator";
     import { Spinner } from "$lib/components/ui/spinner";
+    import { initials } from "$lib/format";
     import { session } from "$lib/session.svelte";
 
     let { data } = $props();
@@ -66,6 +73,31 @@
                 toast.error(errorMessage(e));
         } finally {
             savingProfile = false;
+        }
+    }
+
+    let avatarInput = $state<HTMLInputElement | null>(null);
+    let savingAvatar = $state(false);
+    let deleteAvatarOpen = $state(false);
+
+    async function onAvatarSelected(event: Event) {
+        const input = event.currentTarget as HTMLInputElement;
+        const file = input.files?.[0];
+        input.value = "";
+        if (!file) return;
+        if (file.size > AVATAR_MAX_BYTES) {
+            toast.error("Файл больше 2 МБ");
+            return;
+        }
+        savingAvatar = true;
+        try {
+            await uploadAvatar(file);
+            await Promise.all([invalidateAll(), session.load(true)]);
+            toast.success("Аватарка обновлена");
+        } catch (e) {
+            toast.error(fieldErrors(e).file ?? errorMessage(e));
+        } finally {
+            savingAvatar = false;
         }
     }
 
@@ -143,6 +175,48 @@
             Вы вошли как сервисный администратор — у этого входа нет профиля.
         </p>
     {:else}
+        <section class="mb-8 flex items-center gap-4">
+            <Avatar.Root class="size-20 text-2xl">
+                {#if account.avatarId}
+                    <Avatar.Image src={avatarUrl(account.avatarId)} alt="" />
+                {/if}
+                <Avatar.Fallback>{initials(account)}</Avatar.Fallback>
+            </Avatar.Root>
+            <div class="flex flex-col gap-2">
+                <div class="flex flex-wrap gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={savingAvatar}
+                        onclick={() => avatarInput?.click()}
+                    >
+                        {#if savingAvatar}<Spinner />{/if}
+                        {account.avatarId ? "Заменить фото" : "Загрузить фото"}
+                    </Button>
+                    {#if account.avatarId}
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={savingAvatar}
+                            onclick={() => (deleteAvatarOpen = true)}
+                        >
+                            Удалить
+                        </Button>
+                    {/if}
+                </div>
+                <p class="text-xs text-muted-foreground">
+                    PNG, JPEG, GIF или WebP до 2 МБ
+                </p>
+                <input
+                    bind:this={avatarInput}
+                    type="file"
+                    accept={AVATAR_ACCEPT}
+                    class="hidden"
+                    onchange={onAvatarSelected}
+                />
+            </div>
+        </section>
+
         <section class="flex flex-col gap-4">
             <div>
                 <h2 class="text-lg font-semibold">Личные данные</h2>
@@ -362,5 +436,17 @@
         await unlinkProvider(unlinking);
         await invalidateAll();
         toast.success("Отвязано");
+    }}
+/>
+
+<ConfirmDialog
+    bind:open={deleteAvatarOpen}
+    title="Удалить аватарку?"
+    confirmText="Удалить"
+    destructive
+    onConfirm={async () => {
+        await deleteAvatar();
+        await Promise.all([invalidateAll(), session.load(true)]);
+        toast.success("Аватарка удалена");
     }}
 />

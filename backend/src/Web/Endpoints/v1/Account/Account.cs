@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using SchoolClubs.Application.Services.Account;
+using SchoolClubs.Application.Services.Avatars;
 using SchoolClubs.Web.Infrastructure.Auth;
 
 namespace SchoolClubs.Web.Endpoints.v1.Account;
@@ -12,6 +13,8 @@ public static class Account
         group.MapPut("/", Update).RequireAuthorization(Policies.Consent);
         group.MapPost("/password", ChangePassword).RequireAuthorization(Policies.Consent);
         group.MapDelete("/logins/{provider}", UnlinkLogin).RequireAuthorization(Policies.Consent);
+        group.MapPut("/avatar", UploadAvatar).RequireAuthorization(Policies.Consent).DisableAntiforgery();
+        group.MapDelete("/avatar", DeleteAvatar).RequireAuthorization(Policies.Consent);
         group.MapPut("/username", ChangeUsername).RequireAuthorization(Policies.Consent);
         // Единственный эндпоинт (кроме /auth/*), доступный до принятия согласия.
         group.MapPost("/consent", AcceptConsent);
@@ -48,6 +51,22 @@ public static class Account
         CancellationToken cancellationToken)
     {
         await service.UnlinkLoginAsync(provider, cancellationToken);
+        return TypedResults.NoContent();
+    }
+
+    [EndpointSummary("Upload the current user's avatar (PNG, JPEG, GIF or WebP up to 2 MB)")]
+    public static async Task<AvatarDto> UploadAvatar(IAvatarService service,
+        IFormFile file,
+        CancellationToken cancellationToken)
+    {
+        await using var content = file.OpenReadStream();
+        return await service.UploadAsync(content, cancellationToken);
+    }
+
+    [EndpointSummary("Delete the current user's avatar")]
+    public static async Task<NoContent> DeleteAvatar(IAvatarService service, CancellationToken cancellationToken)
+    {
+        await service.DeleteAsync(cancellationToken);
         return TypedResults.NoContent();
     }
 

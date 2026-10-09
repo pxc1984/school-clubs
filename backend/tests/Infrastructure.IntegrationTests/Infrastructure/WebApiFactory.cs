@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using SchoolClubs.Application.Common.Interfaces;
 
 namespace SchoolClubs.Infrastructure.IntegrationTests.Infrastructure;
 
@@ -24,5 +27,7 @@ public class WebApiFactory(string connectionString, string s3Url) : WebApplicati
         // Яндекс ID (OAuth 2.0 из appsettings.json) включён фиктивным клиентом: проверяем редирект, без сети.
         builder.UseSetting("Auth:Oidc:yandex:ClientId", "test-client");
         builder.UseSetting("Auth:Oidc:yandex:ClientSecret", "test-secret");
+        builder.ConfigureTestServices(services =>
+            services.AddSingleton<IRemoteFileDownloader, FakeRemoteFileDownloader>());
     }
 }

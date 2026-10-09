@@ -25,6 +25,13 @@ public class UserRepository(DbContext dbContext) : Repository<User>(dbContext), 
         return await DbSet.FirstOrDefaultAsync(u => u.Username == normalized, cancellationToken);
     }
 
+    public async Task<User?> GetWithAvatarAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Include(u => u.Avatar)
+            .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+    }
+
     public async Task<User?> GetWithChildrenAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await DbSet

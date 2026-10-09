@@ -7,6 +7,7 @@ using SchoolClubs.Application.Services.AccessRequests;
 using SchoolClubs.Application.Services.Account;
 using SchoolClubs.Application.Services.Admin;
 using SchoolClubs.Application.Services.Auth;
+using SchoolClubs.Application.Services.Avatars;
 using SchoolClubs.Application.Services.Gradebook;
 using SchoolClubs.Application.Services.GradebookImport;
 using SchoolClubs.Application.Services.Lessons;
@@ -30,6 +31,7 @@ public static class DependencyInjection
         builder.Services.AddScoped<ITodoItemService, TodoItemService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
         builder.Services.AddScoped<IAccountService, AccountService>();
+        builder.Services.AddScoped<IAvatarService, AvatarService>();
         builder.Services.AddScoped<IAdminGroupService, AdminGroupService>();
         builder.Services.AddScoped<IAdminUserService, AdminUserService>();
         builder.Services.AddScoped<IAdminStudentService, AdminStudentService>();

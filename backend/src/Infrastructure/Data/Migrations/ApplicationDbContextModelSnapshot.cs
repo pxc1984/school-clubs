@@ -587,6 +587,10 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                 {
                     b.HasBaseType("SchoolClubs.Domain.Entities.Users.Profile");
 
+                    b.Property<Guid?>("AvatarId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("avatar_id");
+
                     b.Property<DateTimeOffset?>("ConsentAcceptedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("consent_accepted_at");
@@ -626,6 +630,8 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)")
                         .HasColumnName("username");
+
+                    b.HasIndex("AvatarId");
 
                     b.HasIndex("Email");
 
@@ -785,6 +791,11 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("SchoolClubs.Domain.Entities.Users.User", b =>
                 {
+                    b.HasOne("SchoolClubs.Domain.Entities.Data.DataEntry", "Avatar")
+                        .WithMany()
+                        .HasForeignKey("AvatarId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.OwnsMany("SchoolClubs.Domain.Entities.Users.UserRoleGrant", "_roles", b1 =>
                         {
                             b1.Property<Guid>("user_id")
@@ -802,6 +813,8 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                             b1.WithOwner()
                                 .HasForeignKey("user_id");
                         });
+
+                    b.Navigation("Avatar");
 
                     b.Navigation("_roles");
                 });

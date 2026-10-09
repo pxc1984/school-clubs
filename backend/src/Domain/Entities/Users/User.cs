@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Net.Mail;
 using JetBrains.Annotations;
 using SchoolClubs.Domain.Common.Exceptions;
+using SchoolClubs.Domain.Entities.Data;
 using SchoolClubs.Domain.Entities.Gradebook;
 
 namespace SchoolClubs.Domain.Entities.Users;
@@ -55,6 +56,11 @@ public class User : Profile
 
     /// <summary>Необязательный уникальный ник; хранится в нижнем регистре, без ведущего <c>@</c>.</summary>
     public string? Username { get; private set; }
+
+    /// <summary>Аватарка: файл в S3, метаданные — <see cref="DataEntry"/>.</summary>
+    public Guid? AvatarId { get; private set; }
+
+    public DataEntry? Avatar { get; private set; }
 
     public IReadOnlyCollection<UserRole> Roles
     {
@@ -134,6 +140,17 @@ public class User : Profile
     {
         return normalized is { Length: >= UsernameMinLength and <= UsernameMaxLength }
                && System.Text.RegularExpressions.Regex.IsMatch(normalized, UsernamePattern);
+    }
+
+    /// <param name="avatar"><c>null</c> — убрать аватарку.</param>
+    /// <returns>Прежняя аватарка (её файл удаляет вызывающий) или <c>null</c>.</returns>
+    /// <remarks>Прежняя аватарка известна, только если навигация <see cref="Avatar"/> загружена.</remarks>
+    public DataEntry? ChangeAvatar(DataEntry? avatar)
+    {
+        var previous = Avatar;
+        Avatar = avatar;
+        AvatarId = avatar?.Id;
+        return previous;
     }
 
     public bool HasRole(UserRole role)
