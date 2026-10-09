@@ -8,7 +8,7 @@ public static class AuthSchemes
     /// <summary>Временная cookie между callback внешнего провайдера и выпуском сессии.</summary>
     public const string External = "external";
 
-    /// <summary>Префикс схем OIDC-провайдеров: <c>oidc-yandex</c>.</summary>
+    /// <summary>Префикс схем внешних провайдеров (OIDC и OAuth 2.0): <c>oidc-yandex</c>.</summary>
     public const string OidcPrefix = "oidc-";
 }
 

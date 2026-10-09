@@ -1,5 +1,8 @@
+using System.Net.Http.Headers;
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using SchoolClubs.Application.Services.Auth;
@@ -7,19 +10,60 @@ using SchoolClubs.Application.Services.Auth;
 namespace SchoolClubs.Web.Infrastructure.Auth;
 
 /// <summary>
-/// Один внешний OIDC-провайдер из секции <c>Auth:Oidc:&lt;name&gt;</c>. Новый провайдер (Google, VK ID, …)
+/// Один внешний провайдер входа из секции <c>Auth:Oidc:&lt;name&gt;</c>. Новый провайдер (Google, VK ID, …)
 /// подключается только конфигом; провайдер с пустым <see cref="ClientId"/> выключен.
 /// </summary>
+/// <remarks>
+/// Два протокола: OIDC с discovery по <see cref="Authority"/> и OAuth 2.0 без discovery (Яндекс ID на
+/// oauth.yandex.ru), где профиль читается с <see cref="UserInfoEndpoint"/> и раскладывается в стандартные
+/// OIDC-клеймы по <see cref="ClaimKeys"/>.
+/// </remarks>
 public class OidcProviderOptions
 {
+    public const string OidcProtocol = "oidc";
+    public const string OAuth2Protocol = "oauth2";
+
+    private static readonly string[] DefaultOidcScopes = ["openid", "profile", "email"];
+
     public string DisplayName { get; set; } = string.Empty;
 
-    /// <summary>Issuer с <c>/.well-known/openid-configuration</c>.</summary>
-    public string Authority { get; set; } = string.Empty;
+    /// <summary><c>oidc</c> (по умолчанию) или <c>oauth2</c>.</summary>
+    public string Protocol { get; set; } = OidcProtocol;
+
+    /// <summary>OIDC: issuer с <c>/.well-known/openid-configuration</c>.</summary>
+    public string? Authority { get; set; }
+
+    /// <summary>OAuth 2.0: адреса авторизации, обмена кода и профиля.</summary>
+    public string? AuthorizationEndpoint { get; set; }
+
+    public string? TokenEndpoint { get; set; }
+    public string? UserInfoEndpoint { get; set; }
+
+    /// <summary>OAuth 2.0: схема заголовка Authorization к <see cref="UserInfoEndpoint"/>; у Яндекс ID — <c>OAuth</c>.</summary>
+    public string UserInfoAuthScheme { get; set; } = "Bearer";
+
+    /// <summary>
+    /// OAuth 2.0: стандартный клейм (<c>sub</c>, <c>email</c>, <c>email_verified</c>, <c>given_name</c>,
+    /// <c>family_name</c>, <c>middle_name</c>) → JSON-ключ ответа <see cref="UserInfoEndpoint"/>.
+    /// </summary>
+    public Dictionary<string, string> ClaimKeys { get; set; } = new();
 
     public string? ClientId { get; set; }
     public string? ClientSecret { get; set; }
-    public string[] Scopes { get; set; } = ["openid", "profile", "email"];
+
+    /// <summary>Пусто — для OIDC <c>openid profile email</c>.</summary>
+    /// <remarks>Без значения по умолчанию: биндер конфигурации дописывает элементы к массиву, а не заменяет его.</remarks>
+    public string[] Scopes { get; set; } = [];
+
+    public bool IsOAuth2
+    {
+        get { return string.Equals(Protocol, OAuth2Protocol, StringComparison.OrdinalIgnoreCase); }
+    }
+
+    public IReadOnlyList<string> EffectiveScopes
+    {
+        get { return Scopes.Length == 0 && !IsOAuth2 ? DefaultOidcScopes : Scopes; }
+    }
 
     /// <summary>
     /// Провайдер выдаёт только подтверждённые адреса, даже без claim <c>email_verified</c>.
@@ -29,7 +73,18 @@ public class OidcProviderOptions
 
     public bool IsEnabled
     {
-        get { return !string.IsNullOrWhiteSpace(ClientId) && !string.IsNullOrWhiteSpace(Authority); }
+        get
+        {
+            if (string.IsNullOrWhiteSpace(ClientId))
+                return false;
+            if (!IsOAuth2)
+                return !string.IsNullOrWhiteSpace(Authority);
+
+            return !string.IsNullOrWhiteSpace(AuthorizationEndpoint)
+                   && !string.IsNullOrWhiteSpace(TokenEndpoint)
+                   && !string.IsNullOrWhiteSpace(UserInfoEndpoint)
+                   && ClaimKeys.ContainsKey("sub");
+        }
     }
 }
 
@@ -100,46 +155,99 @@ public class OidcProviderRegistry
 
 public static class OidcAuthenticationBuilderExtensions
 {
-    /// <summary>Регистрирует по OIDC-схеме на каждый включённый провайдер.</summary>
+    /// <summary>Регистрирует по схеме на каждый включённый провайдер: OIDC или OAuth 2.0.</summary>
     public static AuthenticationBuilder AddOidcProviders(this AuthenticationBuilder builder,
         OidcProviderRegistry registry)
     {
         foreach (var (name, provider) in registry.All)
         {
-            builder.AddOpenIdConnect(OidcProviderRegistry.SchemeOf(name), provider.DisplayName, options =>
-            {
-                options.SignInScheme = AuthSchemes.External;
-                options.Authority = provider.Authority;
-                options.ClientId = provider.ClientId;
-                options.ClientSecret = provider.ClientSecret;
-                options.CallbackPath = OidcProviderRegistry.CallbackPathOf(name);
-
-                options.ResponseType = OpenIdConnectResponseType.Code;
-                // query, а не form_post: callback — обычный GET, и correlation-cookie с SameSite=Lax доходят
-                // даже по http в локальной разработке.
-                options.ResponseMode = OpenIdConnectResponseMode.Query;
-                options.UsePkce = true;
-                options.GetClaimsFromUserInfoEndpoint = true;
-                options.MapInboundClaims = false;
-                options.SaveTokens = false;
-                options.Scope.Clear();
-                foreach (var scope in provider.Scopes)
-                    options.Scope.Add(scope);
-
-                options.CorrelationCookie.SameSite = SameSiteMode.Lax;
-                options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-                options.NonceCookie.SameSite = SameSiteMode.Lax;
-                options.NonceCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-
-                options.Events.OnRemoteFailure = context =>
-                {
-                    context.Response.Redirect("/login?error=external");
-                    context.HandleResponse();
-                    return Task.CompletedTask;
-                };
-            });
+            if (provider.IsOAuth2)
+                builder.AddOAuth2Provider(name, provider);
+            else
+                builder.AddOidcProvider(name, provider);
         }
 
         return builder;
+    }
+
+    private static void AddOidcProvider(this AuthenticationBuilder builder, string name, OidcProviderOptions provider)
+    {
+        builder.AddOpenIdConnect(OidcProviderRegistry.SchemeOf(name), provider.DisplayName, options =>
+        {
+            options.SignInScheme = AuthSchemes.External;
+            options.Authority = provider.Authority;
+            options.ClientId = provider.ClientId;
+            options.ClientSecret = provider.ClientSecret;
+            options.CallbackPath = OidcProviderRegistry.CallbackPathOf(name);
+
+            options.ResponseType = OpenIdConnectResponseType.Code;
+            // query, а не form_post: callback — обычный GET, и correlation-cookie с SameSite=Lax доходят
+            // даже по http в локальной разработке.
+            options.ResponseMode = OpenIdConnectResponseMode.Query;
+            options.UsePkce = true;
+            options.GetClaimsFromUserInfoEndpoint = true;
+            options.MapInboundClaims = false;
+            options.SaveTokens = false;
+            options.Scope.Clear();
+            foreach (var scope in provider.EffectiveScopes)
+                options.Scope.Add(scope);
+
+            ConfigureCookies(options);
+            options.NonceCookie.SameSite = SameSiteMode.Lax;
+            options.NonceCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+            options.Events.OnRemoteFailure = RedirectToLogin;
+        });
+    }
+
+    private static void AddOAuth2Provider(this AuthenticationBuilder builder, string name,
+        OidcProviderOptions provider)
+    {
+        builder.AddOAuth(OidcProviderRegistry.SchemeOf(name), provider.DisplayName, options =>
+        {
+            options.SignInScheme = AuthSchemes.External;
+            options.ClientId = provider.ClientId!;
+            options.ClientSecret = provider.ClientSecret ?? string.Empty;
+            options.CallbackPath = OidcProviderRegistry.CallbackPathOf(name);
+            options.AuthorizationEndpoint = provider.AuthorizationEndpoint!;
+            options.TokenEndpoint = provider.TokenEndpoint!;
+            options.UserInformationEndpoint = provider.UserInfoEndpoint!;
+            options.UsePkce = true;
+            options.SaveTokens = false;
+            options.Scope.Clear();
+            foreach (var scope in provider.EffectiveScopes)
+                options.Scope.Add(scope);
+            foreach (var (claim, jsonKey) in provider.ClaimKeys)
+                options.ClaimActions.MapJsonKey(claim, jsonKey);
+
+            ConfigureCookies(options);
+            options.Events.OnCreatingTicket = context => LoadUserInfoAsync(context, provider);
+            options.Events.OnRemoteFailure = RedirectToLogin;
+        });
+    }
+
+    /// <summary>Профиль OAuth 2.0-провайдера → клеймы по <see cref="OidcProviderOptions.ClaimKeys"/>.</summary>
+    private static async Task LoadUserInfoAsync(OAuthCreatingTicketContext context, OidcProviderOptions provider)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, context.Options.UserInformationEndpoint);
+        request.Headers.Authorization = new AuthenticationHeaderValue(provider.UserInfoAuthScheme, context.AccessToken);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+        using var response = await context.Backchannel.SendAsync(request, context.HttpContext.RequestAborted);
+        response.EnsureSuccessStatusCode();
+        using var user = JsonDocument.Parse(await response.Content.ReadAsStringAsync(context.HttpContext.RequestAborted));
+        context.RunClaimActions(user.RootElement);
+    }
+
+    private static void ConfigureCookies(RemoteAuthenticationOptions options)
+    {
+        options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+        options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    }
+
+    private static Task RedirectToLogin(RemoteFailureContext context)
+    {
+        context.Response.Redirect("/login?error=external");
+        context.HandleResponse();
+        return Task.CompletedTask;
     }
 }

@@ -21,5 +21,8 @@ public class WebApiFactory(string connectionString, string s3Url) : WebApplicati
         builder.UseSetting("Auth:ServiceAdminLoginAttemptsPerMinute", "1000");
         // Сверять сессию с БД на каждом запросе, чтобы блокировка была видна сразу.
         builder.UseSetting("Auth:SessionValidationInterval", "00:00:00");
+        // Яндекс ID (OAuth 2.0 из appsettings.json) включён фиктивным клиентом: проверяем редирект, без сети.
+        builder.UseSetting("Auth:Oidc:yandex:ClientId", "test-client");
+        builder.UseSetting("Auth:Oidc:yandex:ClientSecret", "test-secret");
     }
 }

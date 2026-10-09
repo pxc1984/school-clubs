@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using SchoolClubs.Application.Services.Account;
 using SchoolClubs.Application.Services.Auth;
@@ -160,10 +162,35 @@ public class AuthEndpointTests : TestBase
     }
 
     [Test]
-    public async Task External_UnknownProvider_Returns404_AndNoProvidersConfigured()
+    public async Task External_UnknownProvider_Returns404_OnlyConfiguredProvidersListed()
     {
         (await Client.GetAsync($"{Auth}/external/nope")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
-        (await Client.GetFromJsonAsync<List<JsonElement>>($"{Auth}/providers")).ShouldBeEmpty();
+        var providers = await Client.GetFromJsonAsync<List<JsonElement>>($"{Auth}/providers");
+        var yandex = providers.ShouldHaveSingleItem();
+        yandex.GetProperty("name").GetString().ShouldBe("yandex");
+        yandex.GetProperty("displayName").GetString().ShouldBe("Яндекс ID");
+    }
+
+    [Test]
+    public async Task External_Yandex_RedirectsToOAuthWithPkce()
+    {
+        using var client = FunctionalTestSetup.Factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
+
+        var response = await client.GetAsync($"{Auth}/external/yandex");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Redirect);
+        var location = response.Headers.Location!;
+        location.GetLeftPart(UriPartial.Path).ShouldBe("https://oauth.yandex.ru/authorize");
+        var query = QueryHelpers.ParseQuery(location.Query);
+        query["client_id"].ToString().ShouldBe("test-client");
+        query["response_type"].ToString().ShouldBe("code");
+        query["scope"].ToString().ShouldBe("login:email login:info");
+        query["redirect_uri"].ToString().ShouldBe("http://localhost/api/v1/auth/external/yandex/callback");
+        query["code_challenge_method"].ToString().ShouldBe("S256");
+        query.ShouldContainKey("state");
     }
 
     private static async Task BlockAsync(Guid userId)
