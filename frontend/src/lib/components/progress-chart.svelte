@@ -195,8 +195,7 @@
             </div>
         {/if}
 
-        <table class="sr-only">
-            <caption>Доля решённых задач по занятиям</caption>
+        <table class="sr-only" aria-label="Доля решённых задач по занятиям">
             <thead>
                 <tr><th>Дата</th><th>Ребёнок</th><th>Медиана группы</th></tr>
             </thead>
