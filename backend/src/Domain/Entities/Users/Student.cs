@@ -28,16 +28,19 @@ public class Student : Profile
 
     public void ChangeGrade(string? grade)
     {
+        Grade = NormalizeGrade(grade);
+    }
+
+    /// <summary>«7 б» → «7Б»; пустое — <c>null</c>.</summary>
+    public static string? NormalizeGrade(string? grade)
+    {
         if (string.IsNullOrWhiteSpace(grade))
-        {
-            Grade = null;
-            return;
-        }
+            return null;
 
         var normalized = string.Concat(grade.Where(c => !char.IsWhiteSpace(c))).ToUpperInvariant();
         if (normalized.Length > GradeMaxLength)
             throw new ArgumentException($"grade shouldn't be longer than {GradeMaxLength}", nameof(grade));
 
-        Grade = normalized;
+        return normalized;
     }
 }

@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using SchoolClubs.Application.Services.Common;
 using SchoolClubs.Domain.Entities.Gradebook;
 using SchoolClubs.Domain.Entities.Users;
@@ -24,7 +23,7 @@ public record ImportPlan(
 /// ученики — по скрытому id, иначе по нормализованному ФИО среди учеников группы.
 /// Пустая ячейка — «не изменять»: импорт только добавляет и перезаписывает.
 /// </summary>
-public static partial class GradebookImportPlanner
+public static class GradebookImportPlanner
 {
     public static ImportPlan Plan(ParsedGradebook file,
         Lesson lesson,
@@ -151,7 +150,7 @@ public static partial class GradebookImportPlanner
         if (row.StudentId is { } studentId && group.Students.FirstOrDefault(s => s.Id == studentId) is { } byId)
             return (byId, null, []);
 
-        var tokens = NameTokens(row.Name);
+        var tokens = Names.Tokens(row.Name);
         if (tokens.Count == 0)
             return (null, "Нет ФИО и id ученика.", []);
 
@@ -162,7 +161,7 @@ public static partial class GradebookImportPlanner
             return (null, "Несколько учеников с таким ФИО.", exact);
 
         var similar = group.Students
-            .Where(s => tokens.Contains(Normalize(s.LastName)))
+            .Where(s => tokens.Contains(Names.Normalize(s.LastName)))
             .ToList();
         return (null, "Ученик не найден в группе.", similar);
     }
@@ -173,27 +172,13 @@ public static partial class GradebookImportPlanner
     /// </summary>
     private static bool Matches(IReadOnlyList<string> tokens, Student student)
     {
-        var last = Normalize(student.LastName);
-        var first = Normalize(student.FirstName);
-        var middle = Normalize(student.MiddleName);
+        var last = Names.Normalize(student.LastName);
+        var first = Names.Normalize(student.FirstName);
+        var middle = Names.Normalize(student.MiddleName);
 
         var rest = tokens.ToList();
         if (!rest.Remove(last) || !rest.Remove(first))
             return false;
         return rest.Count == 0 || (rest.Count == 1 && rest[0] == middle);
     }
-
-    public static IReadOnlyList<string> NameTokens(string name)
-    {
-        return Normalize(name).Split(' ', StringSplitOptions.RemoveEmptyEntries);
-    }
-
-    /// <summary>Регистр, <c>ё</c>→<c>е</c>, лишние пробелы.</summary>
-    public static string Normalize(string value)
-    {
-        return Whitespace().Replace(value.Trim().ToLowerInvariant().Replace('ё', 'е'), " ");
-    }
-
-    [GeneratedRegex(@"\s+")]
-    private static partial Regex Whitespace();
 }

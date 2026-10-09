@@ -1,5 +1,6 @@
 using SchoolClubs.Web.Endpoints.v1.Account;
 using SchoolClubs.Web.Endpoints.v1.Admin;
+using SchoolClubs.Web.Endpoints.v1.Parent;
 using SchoolClubs.Web.Endpoints.v1.Teacher;
 using SchoolClubs.Web.Endpoints.v1.TodoItems;
 using SchoolClubs.Web.Infrastructure.Auth;
@@ -45,10 +46,19 @@ public static class WebApplicationExtensions
             .MapGroup("/parents")
             .RequireAuthorization(Policies.Admin)
             .WithTags("Admin: users"));
+        AdminAccessRequests.Map(admin
+            .MapGroup("/access-requests")
+            .RequireAuthorization(Policies.Admin)
+            .WithTags("Admin: access requests"));
         AdminStudents.Map(admin
             .MapGroup("/students")
             .RequireAuthorization(Policies.Admin)
             .WithTags("Admin: students"));
+
+        ParentAccessRequests.Map(v1
+            .MapGroup("/parent")
+            .RequireAuthorization(Policies.Parent)
+            .WithTags("Parent: access requests"));
 
         var teacher = v1.MapGroup("/teacher").RequireAuthorization(Policies.Teacher);
         TeacherGroups.Map(teacher

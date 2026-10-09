@@ -116,6 +116,52 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "access_request",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    group_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    child_last_name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    child_first_name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    child_middle_name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    grade = table.Column<string>(type: "character varying(8)", maxLength: 8, nullable: true),
+                    relation = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: false),
+                    comment = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    consent_accepted_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    status = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: false),
+                    student_id = table.Column<Guid>(type: "uuid", nullable: true),
+                    reject_reason = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    decided_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    created = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    created_by = table.Column<Guid>(type: "uuid", nullable: true),
+                    last_modified = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    last_modified_by = table.Column<Guid>(type: "uuid", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_access_request", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_access_request_group_group_id",
+                        column: x => x.group_id,
+                        principalTable: "group",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_access_request_profile_student_id",
+                        column: x => x.student_id,
+                        principalTable: "profile",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_access_request_profile_user_id",
+                        column: x => x.user_id,
+                        principalTable: "profile",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "group_student",
                 columns: table => new
                 {
@@ -326,6 +372,26 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_access_request_group_id",
+                table: "access_request",
+                column: "group_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_access_request_status_created",
+                table: "access_request",
+                columns: new[] { "status", "created" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_access_request_student_id",
+                table: "access_request",
+                column: "student_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_access_request_user_id",
+                table: "access_request",
+                column: "user_id");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_gradebook_entry_lesson_id",
                 table: "gradebook_entry",
                 column: "lesson_id");
@@ -385,6 +451,9 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "access_request");
+
             migrationBuilder.DropTable(
                 name: "gradebook_entry");
 

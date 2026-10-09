@@ -1,4 +1,5 @@
 using SchoolClubs.Application.Common.Exceptions;
+using SchoolClubs.Domain.Common.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
@@ -43,6 +44,13 @@ public class ProblemDetailsExceptionHandler : IExceptionHandler
                 Title = "Conflict",
                 Type = "https://tools.ietf.org/html/rfc9110#section-15.5.10",
                 Detail = ce.Message,
+            }),
+            AccessRequestStateException se => (StatusCodes.Status409Conflict, new ProblemDetails
+            {
+                Status = StatusCodes.Status409Conflict,
+                Title = "Conflict",
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.10",
+                Detail = se.Message,
             }),
             // Нарушение доменных инвариантов (сущности бросают ArgumentException и наследников).
             ArgumentException ae => (StatusCodes.Status400BadRequest, new ProblemDetails

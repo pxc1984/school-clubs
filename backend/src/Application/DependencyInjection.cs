@@ -3,6 +3,7 @@ using FluentValidation;
 using Microsoft.Extensions.Hosting;
 using SchoolClubs.Application.Common;
 using SchoolClubs.Application.Common.Options;
+using SchoolClubs.Application.Services.AccessRequests;
 using SchoolClubs.Application.Services.Account;
 using SchoolClubs.Application.Services.Admin;
 using SchoolClubs.Application.Services.Auth;
@@ -30,6 +31,8 @@ public static class DependencyInjection
         builder.Services.AddScoped<IAdminGroupService, AdminGroupService>();
         builder.Services.AddScoped<IAdminUserService, AdminUserService>();
         builder.Services.AddScoped<IAdminStudentService, AdminStudentService>();
+        builder.Services.AddScoped<IAccessRequestService, AccessRequestService>();
+        builder.Services.AddScoped<IAdminAccessRequestService, AdminAccessRequestService>();
 
         builder.Services.AddScoped<TeacherAccess>();
         builder.Services.AddScoped<ITeacherGroupService, TeacherGroupService>();
