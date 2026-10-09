@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using SchoolClubs.Application.Services.Auth;
 
@@ -165,12 +166,24 @@ public static class OidcAuthenticationBuilderExtensions
     public static AuthenticationBuilder AddOidcProviders(this AuthenticationBuilder builder,
         OidcProviderRegistry registry)
     {
+        builder.Services.AddDistributedMemoryCache();
+        builder.Services.TryAddSingleton<ServerSideStateDataFormat>();
+
         foreach (var (name, provider) in registry.All)
         {
+            var scheme = OidcProviderRegistry.SchemeOf(name);
             if (provider.IsOAuth2)
+            {
                 builder.AddOAuth2Provider(name, provider);
+                builder.Services.AddOptions<OAuthOptions>(scheme)
+                    .Configure<ServerSideStateDataFormat>((options, state) => options.StateDataFormat = state);
+            }
             else
+            {
                 builder.AddOidcProvider(name, provider);
+                builder.Services.AddOptions<OpenIdConnectOptions>(scheme)
+                    .Configure<ServerSideStateDataFormat>((options, state) => options.StateDataFormat = state);
+            }
         }
 
         return builder;

@@ -8,6 +8,7 @@ using SchoolClubs.Application.Services.Account;
 using SchoolClubs.Application.Services.Auth;
 using SchoolClubs.Domain.Abstractions;
 using SchoolClubs.Domain.Entities.Users;
+using SchoolClubs.Web.Infrastructure.Auth;
 
 namespace SchoolClubs.Infrastructure.IntegrationTests.Auth;
 
@@ -190,7 +191,12 @@ public class AuthEndpointTests : TestBase
         query["scope"].ToString().ShouldBe("login:email login:info");
         query["redirect_uri"].ToString().ShouldBe("http://localhost/api/v1/auth/external/yandex/callback");
         query["code_challenge_method"].ToString().ShouldBe("S256");
-        query.ShouldContainKey("state");
+        // Telegram отвергает длинный state: свойства лежат на сервере, в state — одноразовый ключ.
+        var state = query["state"].ToString();
+        state.Length.ShouldBeLessThanOrEqualTo(32);
+        var stateFormat = FunctionalTestSetup.Factory.Services.GetRequiredService<ServerSideStateDataFormat>();
+        stateFormat.Unprotect(state).ShouldNotBeNull();
+        stateFormat.Unprotect(state).ShouldBeNull();
     }
 
     private static async Task BlockAsync(Guid userId)
