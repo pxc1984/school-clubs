@@ -6,10 +6,6 @@ namespace SchoolClubs.Domain.Entities.Users;
 
 public abstract class Profile : IAuditableEntity
 {
-    private const string DefaultFirstName = "Неизвестно";
-    private const string DefaultMiddleName = "Неизвестнов";
-    private const string DefaultLastName = "Неизвестнович";
-
     protected Profile(string? firstName,
         string? middleName = null,
         string? lastName = null)
@@ -23,9 +19,9 @@ public abstract class Profile : IAuditableEntity
     }
 
     public Guid Id { get; private set; } = Guid.NewGuid();
-    public string FirstName { get; private set; } = DefaultFirstName;
-    public string MiddleName { get; private set; } = DefaultMiddleName;
-    public string LastName { get; private set; } = DefaultLastName;
+    public string FirstName { get; private set; } = "";
+    public string MiddleName { get; private set; } = "";
+    public string LastName { get; private set; } = "";
 
     public DateTimeOffset Created { get; set; }
     public Guid? CreatedBy { get; set; }
@@ -38,8 +34,8 @@ public abstract class Profile : IAuditableEntity
         NamePartsException.ThrowIfHasParts(middleName);
         NamePartsException.ThrowIfHasParts(lastName);
 
-        FirstName = firstName ?? DefaultFirstName;
-        MiddleName = middleName ?? DefaultMiddleName;
-        LastName = lastName ?? DefaultLastName;
+        FirstName = firstName ?? "";
+        MiddleName = middleName ?? "";
+        LastName = lastName ?? "";
     }
 }
