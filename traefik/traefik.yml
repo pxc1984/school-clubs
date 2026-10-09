@@ -1,6 +1,8 @@
 entryPoints:
   web:
     address: ":80"
+    # Крайний прокси — nginx на хосте (локально — сам браузер): X-Forwarded-* от него принимаем как есть.
+    # Поэтому на сервере порт traefik открыт только на 127.0.0.1 (docker-compose.prod.yml).
     forwardedHeaders:
       insecure: true
     transport:

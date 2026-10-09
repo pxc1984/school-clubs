@@ -1,0 +1,19 @@
+# Поверх docker-compose.yml на сервере (dev и prod): готовые образы из GHCR вместо сборки.
+# Наружу ничего не публикуется: traefik слушает только 127.0.0.1:${HTTP_PORT}, туда проксирует хостовой nginx.
+# GITHUB_REPOSITORY_OWNER и COMMIT_SHA дописывает в .env деплой (.github/workflows/deploy.yml).
+services:
+  traefik:
+    ports: !override
+      - "127.0.0.1:${HTTP_PORT:-80}:80"
+
+  db:
+    ports: !reset []
+
+  rustfs:
+    ports: !reset []
+
+  backend:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/school-clubs-backend:${COMMIT_SHA}
+
+  frontend:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/school-clubs-frontend:${COMMIT_SHA}

@@ -80,6 +80,8 @@ services:
       - Storage__S3__AccessKey=${S3_ACCESS_KEY:-rustfsadmin}
       - Storage__S3__SecretKey=${S3_SECRET_KEY:-rustfsadmin}
       - Storage__S3__Bucket=${S3_BUCKET:-schoolclubs}
+      # прокси перед бэкендом: 1 — только traefik, 2 — ещё nginx на хосте (реальный IP клиента)
+      - ForwardedHeaders__ForwardLimit=${ForwardedHeaders__ForwardLimit:-1}
       # ключи шифрования cookie переживают пересоздание контейнера
       - DataProtection__KeysPath=/app/keys
     volumes:

@@ -1,0 +1,66 @@
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: 'Environment name (deploy-dev or deploy-prod)'
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          HOST: ${{ secrets.HOST }}
+          USERNAME: ${{ secrets.USERNAME }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          ENV_FILE: ${{ secrets.ENV }}
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          COMMIT_SHA: ${{ github.sha }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          chmod 644 ~/.ssh/known_hosts
+          SSH="ssh -i $HOME/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new"
+
+          # Только compose-файлы и конфиг traefik: образы приходят готовыми из GHCR, исходников на сервере нет.
+          $SSH "${USERNAME}@${HOST}" "mkdir -p '${DEPLOY_PATH}'"
+          rsync -az --delete-after -e "$SSH" \
+            docker-compose.yml \
+            docker-compose.prod.yml \
+            traefik \
+            "${USERNAME}@${HOST}:${DEPLOY_PATH}/"
+
+          # .env из секрета окружения + версия образов, чтобы ручные `docker compose …` на сервере
+          # видели тот же релиз.
+          {
+            printf '%s\n' "$ENV_FILE"
+            printf 'GITHUB_REPOSITORY_OWNER=%s\nCOMMIT_SHA=%s\n' "$GITHUB_REPOSITORY_OWNER" "$COMMIT_SHA"
+          } | $SSH "${USERNAME}@${HOST}" "cat > '${DEPLOY_PATH}/.env' && chmod 600 '${DEPLOY_PATH}/.env'"
+
+          # --no-build: compose не пытается собирать из (отсутствующих) исходников.
+          $SSH "${USERNAME}@${HOST}" << EOF
+            set -euo pipefail
+            cd '${DEPLOY_PATH}'
+            echo '${GITHUB_TOKEN}' | docker login ghcr.io -u '${GITHUB_ACTOR}' --password-stdin >/dev/null
+            trap 'docker logout ghcr.io >/dev/null' EXIT
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --pull always --no-build --remove-orphans --wait
+            docker image prune -f
+          EOF

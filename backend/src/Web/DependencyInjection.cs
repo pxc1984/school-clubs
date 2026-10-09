@@ -25,12 +25,16 @@ public static class DependencyInjection
         builder.Services.AddHealthChecks()
             .AddDbContextCheck<ApplicationDbContext>();
 
-        // Наружу торчит только traefik: доверяем его X-Forwarded-* (реальный IP для rate limit и согласия на ПДн).
+        // Бэкенд доступен только через прокси: доверяем их X-Forwarded-* (реальный IP для rate limit и согласия
+        // на ПДн). ForwardLimit — число прокси, дописывающих X-Forwarded-For: traefik, на сервере ещё nginx.
+        var forwardLimit = builder.Configuration.GetValue<int?>("ForwardedHeaders:ForwardLimit");
         builder.Services.Configure<ForwardedHeadersOptions>(options =>
         {
             options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
             options.KnownIPNetworks.Clear();
             options.KnownProxies.Clear();
+            if (forwardLimit is not null)
+                options.ForwardLimit = forwardLimit;
         });
 
         // Ключи шифруют cookie сессий: без постоянного хранилища каждый рестарт контейнера разлогинивает всех.

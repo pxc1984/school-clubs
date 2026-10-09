@@ -1,0 +1,155 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+    inputs:
+      deploy_prod:
+        description: 'Also deploy to prod after dev (only pxc1984 can trigger it)'
+        type: boolean
+        default: false
+
+# PR: новый пуш отменяет старый прогон. master: у каждого прогона своя группа, чтобы деплой
+# на прод не блокировался и не отменялся следующим пушем.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/school-clubs
+
+jobs:
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.x
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('backend/Directory.Packages.props') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - run: dotnet restore
+      - run: dotnet build --no-restore --configuration Release
+      # интеграционные тесты поднимают PostgreSQL и RustFS через Testcontainers (Docker есть на ubuntu-latest)
+      - run: dotnet test --no-build --configuration Release --verbosity minimal
+
+  frontend:
+    name: Frontend checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run check
+      - run: pnpm run build
+
+  build:
+    name: Build and push ${{ matrix.service }} image
+    needs: [ backend, frontend ]
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        service: [ backend, frontend ]
+    env:
+      IMAGE: ghcr.io/${{ github.repository_owner }}/school-clubs-${{ matrix.service }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.service }}
+          file: ${{ matrix.service }}/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: |
+            type=gha,scope=${{ matrix.service }}
+            type=registry,ref=${{ env.IMAGE }}:buildcache
+          cache-to: |
+            type=gha,scope=${{ matrix.service }},mode=max
+            type=registry,ref=${{ env.IMAGE }}:buildcache,mode=max
+
+      # Финальный образ бэкенда должен содержать только опубликованные артефакты — без исходников и .pdb.
+      - name: Verify no source code in image
+        if: matrix.service == 'backend'
+        run: |
+          leaked=$(docker run --rm --entrypoint sh "${IMAGE}:${GITHUB_SHA}" -c \
+            "find / -xdev \( -path /proc -o -path /sys -o -path /usr/share/dotnet \) -prune -o \
+              -type f \( -name '*.cs' -o -name '*.csproj' -o -name '*.slnx' -o -name '*.pdb' \) -print")
+          if [ -n "$leaked" ]; then
+            echo "::error::Source files found in image:"
+            echo "$leaked"
+            exit 1
+          fi
+
+  deploy-dev:
+    name: Deploy to dev
+    needs: build
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    concurrency:
+      group: deploy-dev
+      cancel-in-progress: false
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: deploy-dev
+    secrets: inherit
+
+  # Required reviewers недоступны для приватных репозиториев вне Enterprise, поэтому прод открывается
+  # вручную: Actions → CI/CD → Run workflow (master) с галочкой deploy_prod, только pxc1984.
+  # Окружение deploy-prod дополнительно разрешает деплой только из master.
+  deploy-prod:
+    name: Deploy to prod
+    needs: deploy-dev
+    if: >-
+      github.ref == 'refs/heads/master'
+      && github.event_name == 'workflow_dispatch'
+      && inputs.deploy_prod
+      && github.triggering_actor == 'pxc1984'
+    concurrency:
+      group: deploy-prod
+      cancel-in-progress: false
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: deploy-prod
+    secrets: inherit
