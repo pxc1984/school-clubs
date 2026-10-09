@@ -55,6 +55,11 @@ public class OidcProviderOptions
     /// <remarks>Без значения по умолчанию: биндер конфигурации дописывает элементы к массиву, а не заменяет его.</remarks>
     public string[] Scopes { get; set; } = [];
 
+    /// <summary>
+    /// OIDC: дозапрашивать профиль с userinfo endpoint из discovery. У Telegram его нет — клеймы только в id_token.
+    /// </summary>
+    public bool GetClaimsFromUserInfoEndpoint { get; set; } = true;
+
     public bool IsOAuth2
     {
         get { return string.Equals(Protocol, OAuth2Protocol, StringComparison.OrdinalIgnoreCase); }
@@ -185,7 +190,7 @@ public static class OidcAuthenticationBuilderExtensions
             // даже по http в локальной разработке.
             options.ResponseMode = OpenIdConnectResponseMode.Query;
             options.UsePkce = true;
-            options.GetClaimsFromUserInfoEndpoint = true;
+            options.GetClaimsFromUserInfoEndpoint = provider.GetClaimsFromUserInfoEndpoint;
             options.MapInboundClaims = false;
             options.SaveTokens = false;
             options.Scope.Clear();

@@ -75,6 +75,8 @@ services:
       - Auth__ConsentVersion=${Auth__ConsentVersion:-1}
       - Auth__Oidc__yandex__ClientId=${Auth__Oidc__yandex__ClientId:-}
       - Auth__Oidc__yandex__ClientSecret=${Auth__Oidc__yandex__ClientSecret:-}
+      - Auth__Oidc__telegram__ClientId=${Auth__Oidc__telegram__ClientId:-}
+      - Auth__Oidc__telegram__ClientSecret=${Auth__Oidc__telegram__ClientSecret:-}
       # файлы журналов (XLSX) — в S3-совместимом RustFS
       - Storage__S3__ServiceUrl=http://rustfs:9000
       - Storage__S3__AccessKey=${S3_ACCESS_KEY:-rustfsadmin}
