@@ -7,9 +7,11 @@ using Amazon.S3;
 using Microsoft.Extensions.Options;
 using SchoolClubs.Application.Common.Interfaces;
 using SchoolClubs.Application.Services.GradebookImport;
+using SchoolClubs.Application.Services.ParentDashboard;
 using SchoolClubs.Domain.Abstractions;
 using SchoolClubs.Infrastructure.Data;
 using SchoolClubs.Infrastructure.Data.Interceptors;
+using SchoolClubs.Infrastructure.Data.Queries;
 using SchoolClubs.Infrastructure.Data.Repositories;
 using SchoolClubs.Infrastructure.Identity;
 using SchoolClubs.Infrastructure.Spreadsheets;
@@ -48,6 +50,7 @@ public static class DependencyInjection
         builder.Services.AddScoped<IStudentRepository, StudentRepository>();
         builder.Services.AddScoped<IAccessRequestRepository, AccessRequestRepository>();
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+        builder.Services.AddScoped<IStudentStatisticsQuery, StudentStatisticsQuery>();
 
         builder.Services.AddSingleton<IPasswordHasher, PasswordHasher>();
         builder.Services.AddSingleton<IGradebookSpreadsheet, ClosedXmlGradebookSpreadsheet>();

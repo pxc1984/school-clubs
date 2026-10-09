@@ -10,6 +10,7 @@ using SchoolClubs.Application.Services.Auth;
 using SchoolClubs.Application.Services.Gradebook;
 using SchoolClubs.Application.Services.GradebookImport;
 using SchoolClubs.Application.Services.Lessons;
+using SchoolClubs.Application.Services.ParentDashboard;
 using SchoolClubs.Application.Services.TeacherGroups;
 using SchoolClubs.Application.Services.TodoItems;
 
@@ -23,6 +24,7 @@ public static class DependencyInjection
 
         builder.Services.Configure<AuthOptions>(builder.Configuration.GetSection(AuthOptions.SectionName));
         builder.Services.Configure<SchoolOptions>(builder.Configuration.GetSection(SchoolOptions.SectionName));
+        builder.Services.Configure<StatisticsOptions>(builder.Configuration.GetSection(StatisticsOptions.SectionName));
         builder.Services.AddSingleton(TimeProvider.System);
 
         builder.Services.AddScoped<ITodoItemService, TodoItemService>();
@@ -33,6 +35,7 @@ public static class DependencyInjection
         builder.Services.AddScoped<IAdminStudentService, AdminStudentService>();
         builder.Services.AddScoped<IAccessRequestService, AccessRequestService>();
         builder.Services.AddScoped<IAdminAccessRequestService, AdminAccessRequestService>();
+        builder.Services.AddScoped<IParentDashboardService, ParentDashboardService>();
 
         builder.Services.AddScoped<TeacherAccess>();
         builder.Services.AddScoped<ITeacherGroupService, TeacherGroupService>();

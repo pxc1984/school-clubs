@@ -55,10 +55,13 @@ public static class WebApplicationExtensions
             .RequireAuthorization(Policies.Admin)
             .WithTags("Admin: students"));
 
-        ParentAccessRequests.Map(v1
-            .MapGroup("/parent")
-            .RequireAuthorization(Policies.Parent)
+        var parent = v1.MapGroup("/parent").RequireAuthorization(Policies.Parent);
+        ParentAccessRequests.Map(parent
+            .MapGroup("")
             .WithTags("Parent: access requests"));
+        ParentChildren.Map(parent
+            .MapGroup("/children")
+            .WithTags("Parent: children"));
 
         var teacher = v1.MapGroup("/teacher").RequireAuthorization(Policies.Teacher);
         TeacherGroups.Map(teacher
