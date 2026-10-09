@@ -114,6 +114,36 @@ public class AuthService(
         return await CompleteLoginAsync(user, login, cancellationToken);
     }
 
+    public async Task<ExternalLinkResult> LinkExternalAsync(Guid userId,
+        ExternalIdentity identity,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(identity);
+        ArgumentException.ThrowIfNullOrWhiteSpace(identity.Subject);
+
+        var existing = await logins.FindAsync(identity.Provider, identity.Subject, cancellationToken);
+        if (existing is not null)
+            return existing.UserId == userId ? ExternalLinkResult.AlreadyLinked : ExternalLinkResult.TakenByAnotherUser;
+
+        var user = await users.FindByIdAsync(userId) ?? throw new UnauthorizedAccessException();
+        if (user.IsBlocked)
+            throw new ForbiddenAccessException(ForbiddenAccessException.Blocked);
+        var provider = UserLogin.NormalizeProvider(identity.Provider);
+        if ((await logins.ListByUserAsync(userId, cancellationToken)).Any(l => l.Provider == provider))
+            return ExternalLinkResult.ProviderAlreadyLinked;
+
+        await FillMissingEmailAsync(user, identity, cancellationToken);
+        await FillMissingUsernameAsync(user, identity, cancellationToken);
+        if (user.AvatarId is null && identity.PictureUrl is { } pictureUrl)
+            await avatars.TryImportAsync(user, pictureUrl, cancellationToken);
+
+        var login = UserLogin.ForExternal(user, identity.Provider, identity.Subject);
+        login.MarkUsed(timeProvider.GetUtcNow());
+        await logins.AddAsync(login, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return ExternalLinkResult.Linked;
+    }
+
     public SessionDto LoginServiceAdmin(ServiceAdminLoginRequest request)
     {
         var expected = options.Value.ServiceAdminPassword;

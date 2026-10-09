@@ -33,6 +33,20 @@ public record RegisterRequest(
     string? Phone,
     bool AcceptPersonalDataPolicy);
 
+public enum ExternalLinkResult
+{
+    Linked,
+
+    /// <summary>Этот аккаунт провайдера уже привязан к этому же пользователю.</summary>
+    AlreadyLinked,
+
+    /// <summary>Этот аккаунт провайдера привязан к другому пользователю.</summary>
+    TakenByAnotherUser,
+
+    /// <summary>У пользователя уже привязан другой аккаунт этого провайдера.</summary>
+    ProviderAlreadyLinked,
+}
+
 public record LoginRequest(string Email, string Password);
 
 public record ServiceAdminLoginRequest(string Password);

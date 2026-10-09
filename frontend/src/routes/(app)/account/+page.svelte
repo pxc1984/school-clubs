@@ -2,7 +2,9 @@
     import { toast } from "svelte-sonner";
     import KeyRoundIcon from "@lucide/svelte/icons/key-round";
     import LinkIcon from "@lucide/svelte/icons/link";
-    import { invalidateAll } from "$app/navigation";
+    import { onMount } from "svelte";
+    import { invalidateAll, replaceState } from "$app/navigation";
+    import { page } from "$app/state";
     import {
         AVATAR_ACCEPT,
         AVATAR_MAX_BYTES,
@@ -10,11 +12,11 @@
         changePassword,
         changeUsername,
         deleteAvatar,
+        linkProviderUrl,
         unlinkProvider,
         updateAccount,
         uploadAvatar,
     } from "$lib/api/account";
-    import { externalLoginUrl } from "$lib/api/auth";
     import { errorMessage, fieldErrors, statusOf } from "$lib/api/client";
     import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
     import * as Avatar from "$lib/components/ui/avatar";
@@ -75,6 +77,35 @@
             savingProfile = false;
         }
     }
+
+    const LINK_ERRORS: Record<string, string> = {
+        taken: "Этот аккаунт уже привязан к другому пользователю.",
+        provider: "У вас уже привязан другой аккаунт этого сервиса.",
+        session: "Сессия изменилась во время привязки. Попробуйте ещё раз.",
+    };
+
+    // результат привязки провайдера приходит параметрами после редиректа с backend
+    onMount(() => {
+        const params = page.url.searchParams;
+        const linked = params.get("linked");
+        const linkError = params.get("linkError");
+        if (!linked && !linkError) return;
+        if (linked) {
+            const name =
+                data.providers.find((p) => p.name === linked)?.displayName ??
+                linked;
+            toast.success(`${name} привязан`);
+        } else if (linkError) {
+            toast.error(
+                LINK_ERRORS[linkError] ??
+                    "Не удалось привязать. Попробуйте ещё раз.",
+            );
+        }
+        const url = new URL(page.url);
+        url.searchParams.delete("linked");
+        url.searchParams.delete("linkError");
+        replaceState(url, {});
+    });
 
     let avatarInput = $state<HTMLInputElement | null>(null);
     let savingAvatar = $state(false);
@@ -350,10 +381,7 @@
                             <Button
                                 variant="outline"
                                 size="sm"
-                                href={externalLoginUrl(
-                                    provider.name,
-                                    "/account",
-                                )}
+                                href={linkProviderUrl(provider.name)}
                                 data-sveltekit-reload
                             >
                                 Привязать

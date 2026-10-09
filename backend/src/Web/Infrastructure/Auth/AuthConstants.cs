@@ -8,6 +8,12 @@ public static class AuthSchemes
     /// <summary>Временная cookie между callback внешнего провайдера и выпуском сессии.</summary>
     public const string External = "external";
 
+    /// <summary>
+    /// Ключ в <c>AuthenticationProperties.Items</c>: id пользователя, к которому привязываем провайдер
+    /// (вместо входа). Свойства хранятся на сервере (<see cref="ServerSideStateDataFormat"/>) — подделать нельзя.
+    /// </summary>
+    public const string LinkUserItem = "link_user";
+
     /// <summary>Префикс схем внешних провайдеров (OIDC и OAuth 2.0): <c>oidc-yandex</c>.</summary>
     public const string OidcPrefix = "oidc-";
 }

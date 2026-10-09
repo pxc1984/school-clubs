@@ -295,7 +295,9 @@ public static class OidcAuthenticationBuilderExtensions
 
     private static Task RedirectToLogin(RemoteFailureContext context)
     {
-        context.Response.Redirect("/login?error=external");
+        // Отмена или ошибка при привязке из профиля — назад в профиль, а не на страницу входа.
+        var linking = context.Properties?.Items.ContainsKey(AuthSchemes.LinkUserItem) == true;
+        context.Response.Redirect(linking ? "/account?linkError=external" : "/login?error=external");
         context.HandleResponse();
         return Task.CompletedTask;
     }

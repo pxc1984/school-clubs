@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using SchoolClubs.Application.Services.Account;
 using SchoolClubs.Application.Services.Avatars;
+using SchoolClubs.Application.Common.Interfaces;
 using SchoolClubs.Web.Infrastructure.Auth;
+using AuthEndpoints = SchoolClubs.Web.Endpoints.v1.Auth.Auth;
 
 namespace SchoolClubs.Web.Endpoints.v1.Account;
 
@@ -12,6 +14,7 @@ public static class Account
         group.MapGet("/", Get).RequireAuthorization(Policies.Consent);
         group.MapPut("/", Update).RequireAuthorization(Policies.Consent);
         group.MapPost("/password", ChangePassword).RequireAuthorization(Policies.Consent);
+        group.MapGet("/logins/{provider}/link", LinkLogin).RequireAuthorization(Policies.Consent);
         group.MapDelete("/logins/{provider}", UnlinkLogin).RequireAuthorization(Policies.Consent);
         group.MapPut("/avatar", UploadAvatar).RequireAuthorization(Policies.Consent).DisableAntiforgery();
         group.MapDelete("/avatar", DeleteAvatar).RequireAuthorization(Policies.Consent);
@@ -43,6 +46,18 @@ public static class Account
         var session = await service.ChangePasswordAsync(request, cancellationToken);
         await httpContext.SignInSessionAsync(session);
         return TypedResults.NoContent();
+    }
+
+    /// <remarks>Навигация браузера, а не XHR: уводит к провайдеру и возвращает на <c>/account</c>.</remarks>
+    [EndpointSummary("Start linking an external login provider to the current user")]
+    public static Results<ChallengeHttpResult, NotFound> LinkLogin(OidcProviderRegistry registry,
+        ICurrentUser currentUser,
+        string provider)
+    {
+        if (!registry.TryGet(provider, out _) || currentUser.UserId is not { } userId)
+            return TypedResults.NotFound();
+
+        return AuthEndpoints.ChallengeExternal(provider, "/account", userId);
     }
 
     [EndpointSummary("Unlink an external login provider")]

@@ -74,6 +74,11 @@ export async function changePassword(
     await api.post("/account/password", request);
 }
 
+/** Полная навигация: backend уводит к провайдеру и возвращает на /account?linked=… или ?linkError=… */
+export function linkProviderUrl(provider: string): string {
+    return apiUrl(`/account/logins/${encodeURIComponent(provider)}/link`);
+}
+
 export async function unlinkProvider(provider: string): Promise<void> {
     await api.delete(`/account/logins/${encodeURIComponent(provider)}`);
 }

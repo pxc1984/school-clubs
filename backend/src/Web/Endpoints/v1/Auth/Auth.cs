@@ -70,10 +70,18 @@ public static class Auth
         if (!registry.TryGet(provider, out _))
             return TypedResults.NotFound();
 
+        return ChallengeExternal(provider, returnUrl, null);
+    }
+
+    /// <param name="linkUserId">Привязать провайдер к этому пользователю вместо входа.</param>
+    public static ChallengeHttpResult ChallengeExternal(string provider, string? returnUrl, Guid? linkUserId)
+    {
         var name = provider.ToLowerInvariant();
         var complete = $"/api/v1/auth/external/{name}/complete?returnUrl={Uri.EscapeDataString(LocalUrl.OrDefault(returnUrl))}";
-        return TypedResults.Challenge(new AuthenticationProperties { RedirectUri = complete },
-            [OidcProviderRegistry.SchemeOf(name)]);
+        var properties = new AuthenticationProperties { RedirectUri = complete };
+        if (linkUserId is { } userId)
+            properties.Items[AuthSchemes.LinkUserItem] = userId.ToString();
+        return TypedResults.Challenge(properties, [OidcProviderRegistry.SchemeOf(name)]);
     }
 
     /// <summary>Сюда провайдер возвращает пользователя после callback: выпускаем сессию и уводим на фронт.</summary>
@@ -97,6 +105,9 @@ public static class Auth
             || OidcProviderRegistry.ToIdentity(name, options, external.Principal!) is not { } identity)
             return TypedResults.LocalRedirect("/login?error=external");
 
+        if (external.Properties!.Items.TryGetValue(AuthSchemes.LinkUserItem, out var linkUser))
+            return await LinkAsync(service, httpContext, name, identity, linkUser, returnUrl, cancellationToken);
+
         SessionDto session;
         try
         {
@@ -112,5 +123,32 @@ public static class Auth
         return TypedResults.LocalRedirect(session.ConsentRequired
             ? $"/consent?returnUrl={Uri.EscapeDataString(target)}"
             : target);
+    }
+
+    /// <summary>
+    /// Привязка из профиля: сессия должна принадлежать тому же пользователю, что начал привязку, —
+    /// иначе (вышел, вошёл другим) ничего не привязываем.
+    /// </summary>
+    private static async Task<RedirectHttpResult> LinkAsync(IAuthService service,
+        HttpContext httpContext,
+        string provider,
+        ExternalIdentity identity,
+        string? linkUser,
+        string? returnUrl,
+        CancellationToken cancellationToken)
+    {
+        var target = LocalUrl.OrDefault(returnUrl);
+        if (!Guid.TryParse(linkUser, out var userId) || httpContext.User.GetUserId() != userId)
+            return TypedResults.LocalRedirect(WithQuery(target, "linkError", "session"));
+
+        var result = await service.LinkExternalAsync(userId, identity, cancellationToken);
+        return TypedResults.LocalRedirect(result is ExternalLinkResult.Linked or ExternalLinkResult.AlreadyLinked
+            ? WithQuery(target, "linked", provider)
+            : WithQuery(target, "linkError", result == ExternalLinkResult.TakenByAnotherUser ? "taken" : "provider"));
+    }
+
+    private static string WithQuery(string url, string key, string value)
+    {
+        return $"{url}{(url.Contains('?') ? '&' : '?')}{key}={Uri.EscapeDataString(value)}";
     }
 }

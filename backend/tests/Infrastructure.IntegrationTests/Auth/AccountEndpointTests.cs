@@ -1,10 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using SchoolClubs.Application.Services.Account;
 using SchoolClubs.Application.Services.Auth;
 using SchoolClubs.Domain.Abstractions;
 using SchoolClubs.Domain.Entities.Users;
+using SchoolClubs.Web.Infrastructure.Auth;
 
 namespace SchoolClubs.Infrastructure.IntegrationTests.Auth;
 
@@ -104,5 +107,32 @@ public class AccountEndpointTests : TestBase
             logins.Remove(login);
             await sp.GetRequiredService<IUnitOfWork>().SaveChangesAsync();
         });
+    }
+
+    [Test]
+    public async Task LinkLogin_ChallengesProviderOnBehalfOfCurrentUser()
+    {
+        var (_, user) = await LoginAsAsync(UserRole.Parent);
+        using var client = FunctionalTestSetup.Factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
+        client.DefaultRequestHeaders.Add("X-Requested-With", "fetch");
+        (await client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest(user.Email.Address, DefaultPassword)))
+            .EnsureSuccessStatusCode();
+
+        var response = await client.GetAsync($"{Account}/logins/yandex/link");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Redirect);
+        var location = response.Headers.Location!;
+        location.GetLeftPart(UriPartial.Path).ShouldBe("https://oauth.yandex.ru/authorize");
+        var state = QueryHelpers.ParseQuery(location.Query)["state"].ToString();
+        var properties = FunctionalTestSetup.Factory.Services.GetRequiredService<ServerSideStateDataFormat>()
+            .Unprotect(state);
+        properties!.Items[AuthSchemes.LinkUserItem].ShouldBe(user.Id.ToString());
+
+        (await client.GetAsync($"{Account}/logins/nope/link")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await CreateClient().GetAsync($"{Account}/logins/yandex/link")).StatusCode
+            .ShouldBe(HttpStatusCode.Unauthorized);
     }
 }

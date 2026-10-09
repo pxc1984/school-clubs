@@ -13,6 +13,13 @@ public interface IAuthService
     /// </summary>
     Task<SessionDto> ExternalLoginAsync(ExternalIdentity identity, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Привязывает внешний аккаунт к уже вошедшему пользователю (кнопка «Привязать» в профиле), не меняя сессию.
+    /// </summary>
+    Task<ExternalLinkResult> LinkExternalAsync(Guid userId,
+        ExternalIdentity identity,
+        CancellationToken cancellationToken = default);
+
     /// <exception cref="UnauthorizedAccessException">Неверный пароль или сервисный вход выключен.</exception>
     SessionDto LoginServiceAdmin(ServiceAdminLoginRequest request);
 

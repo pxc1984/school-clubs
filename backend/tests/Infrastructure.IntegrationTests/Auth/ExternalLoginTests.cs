@@ -127,4 +127,44 @@ public class ExternalLoginTests : TestBase
         var broken = await LoginAsync(Identity("ya-av-2", pictureUrl: "https://avatars.test/missing.png"));
         (await FindUserAsync(broken)).AvatarId.ShouldBeNull();
     }
+
+    [Test]
+    public async Task Link_AddsProviderToCurrentUser_InsteadOfCreatingAccount()
+    {
+        var parent = await CreateUserAsync("parent@school218.ru", [UserRole.Parent]);
+
+        var result = await LinkAsync(parent.Id,
+            Identity("ya-link-1", "other@yandex.ru", verified: true, "anna_ya", FakeRemoteFileDownloader.PngUrl));
+
+        result.ShouldBe(ExternalLinkResult.Linked);
+        var logins = await InScope(sp => sp.GetRequiredService<IUserLoginRepository>().ListByUserAsync(parent.Id));
+        logins.Select(l => l.Provider).ShouldBe(["password", "yandex"], ignoreOrder: true);
+        var user = await InScope(sp => sp.GetRequiredService<IUserRepository>().FindByIdAsync(parent.Id));
+        user!.Email.Address.ShouldBe("parent@school218.ru");
+        user.Username.ShouldBe("anna_ya");
+        user.AvatarId.ShouldNotBeNull();
+
+        // Дальше вход через Яндекс попадает в этот же аккаунт.
+        (await LoginAsync(Identity("ya-link-1"))).UserId.ShouldBe(parent.Id);
+        (await LinkAsync(parent.Id, Identity("ya-link-1"))).ShouldBe(ExternalLinkResult.AlreadyLinked);
+    }
+
+    [Test]
+    public async Task Link_TakenOrSecondAccountOfProvider_IsRejected()
+    {
+        var parent = await CreateUserAsync("parent@school218.ru", [UserRole.Parent]);
+        var other = await LoginAsync(Identity("ya-link-2"));
+
+        (await LinkAsync(parent.Id, Identity("ya-link-2"))).ShouldBe(ExternalLinkResult.TakenByAnotherUser);
+        (await LinkAsync(parent.Id, Identity("ya-link-3"))).ShouldBe(ExternalLinkResult.Linked);
+        (await LinkAsync(parent.Id, Identity("ya-link-4"))).ShouldBe(ExternalLinkResult.ProviderAlreadyLinked);
+
+        var logins = await InScope(sp => sp.GetRequiredService<IUserLoginRepository>().ListByUserAsync(other.UserId!.Value));
+        logins.ShouldHaveSingleItem().ProviderKey.ShouldBe("ya-link-2");
+    }
+
+    private static Task<ExternalLinkResult> LinkAsync(Guid userId, ExternalIdentity identity)
+    {
+        return InScope(sp => sp.GetRequiredService<IAuthService>().LinkExternalAsync(userId, identity));
+    }
 }
