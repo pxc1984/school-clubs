@@ -140,10 +140,7 @@
         scheduleSave();
     }
 
-    function setAttendance(
-        studentId: string,
-        status: AttendanceStatus | null,
-    ) {
+    function setAttendance(studentId: string, status: AttendanceStatus | null) {
         if (status) attendanceOf.set(studentId, status);
         else attendanceOf.delete(studentId);
         dirtyAttendance.set(studentId, status);
