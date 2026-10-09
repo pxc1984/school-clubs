@@ -49,6 +49,25 @@ public class AccountEndpointTests : TestBase
     }
 
     [Test]
+    public async Task Update_UnreadableBody_IsBadRequestProblem()
+    {
+        var (client, _) = await LoginAsAsync(UserRole.Parent);
+
+        var unknownEnum = await client.PutAsJsonAsync(Account,
+            new { firstName = "Мария", lastName = "Петрова", gender = "Unknown" });
+        var malformed = await client.PutAsync(Account,
+            new StringContent("{\"firstName\":", System.Text.Encoding.UTF8, "application/json"));
+
+        foreach (var response in new[] { unknownEnum, malformed })
+        {
+            response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+            var problem = await response.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>();
+            problem!.Status.ShouldBe(400);
+            problem.Title.ShouldBe("Bad request");
+        }
+    }
+
+    [Test]
     public async Task ChangePassword_RequiresCurrent_KeepsCurrentSession_EndsOthers()
     {
         var (client, user) = await LoginAsAsync(UserRole.Parent);

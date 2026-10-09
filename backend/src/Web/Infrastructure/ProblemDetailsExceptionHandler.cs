@@ -52,6 +52,14 @@ public class ProblemDetailsExceptionHandler : IExceptionHandler
                 Type = "https://tools.ietf.org/html/rfc9110#section-15.5.10",
                 Detail = se.Message,
             }),
+            // Запрос не разобрать: битый JSON, неизвестное значение enum, не тот тип параметра.
+            BadHttpRequestException be => (be.StatusCode, new ProblemDetails
+            {
+                Status = be.StatusCode,
+                Title = "Bad request",
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+                Detail = be.Message,
+            }),
             // Нарушение доменных инвариантов (сущности бросают ArgumentException и наследников).
             ArgumentException ae => (StatusCodes.Status400BadRequest, new ProblemDetails
             {

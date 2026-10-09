@@ -19,6 +19,9 @@ public static class DependencyInjection
 
         builder.Services.AddExceptionHandler<ProblemDetailsExceptionHandler>();
         builder.Services.AddProblemDetails();
+        // Нечитаемое тело (битый JSON, неизвестное значение enum) — исключением в ProblemDetailsExceptionHandler,
+        // а не пустым 400 (по умолчанию так везде, кроме Development).
+        builder.Services.Configure<RouteHandlerOptions>(options => options.ThrowOnBadRequest = true);
 
         builder.Services.AddOpenApi();
 
