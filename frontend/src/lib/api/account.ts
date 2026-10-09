@@ -4,6 +4,8 @@ import type { Guid, PersonName, UserRole } from "$lib/api/types";
 export type AccountDto = PersonName & {
     id: Guid;
     email: string;
+    /** без "@", в нижнем регистре; подтягивается из Telegram/Яндекса, если не задан */
+    username: string | null;
     phone: string | null;
     roles: UserRole[];
     /** "password" и имена внешних провайдеров ("yandex") */
@@ -29,6 +31,16 @@ export async function updateAccount(
     request: UpdateAccountRequest,
 ): Promise<AccountDto> {
     const response = await api.put<AccountDto>("/account", request);
+    return response.data;
+}
+
+/** null или пустая строка убирает ник; 409 — ник занят */
+export async function changeUsername(
+    username: string | null,
+): Promise<AccountDto> {
+    const response = await api.put<AccountDto>("/account/username", {
+        username,
+    });
     return response.data;
 }
 

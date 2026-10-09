@@ -47,6 +47,15 @@ public class User : Profile
     }
     public string? Phone { get; private set; }
 
+    public const int UsernameMinLength = 3;
+    public const int UsernameMaxLength = 32;
+
+    /// <summary>Латиница, цифры, <c>_</c>, <c>.</c>, <c>-</c>; начинается с буквы или цифры.</summary>
+    public const string UsernamePattern = "^[a-z0-9][a-z0-9_.-]*$";
+
+    /// <summary>Необязательный уникальный ник; хранится в нижнем регистре, без ведущего <c>@</c>.</summary>
+    public string? Username { get; private set; }
+
     public IReadOnlyCollection<UserRole> Roles
     {
         get { return _roles.Select(r => r.Role).ToList(); }
@@ -97,6 +106,34 @@ public class User : Profile
             throw new ArgumentException("invalid phone number passed", nameof(phone));
 
         Phone = phone;
+    }
+
+    /// <param name="username"><c>null</c> или пустая строка — убрать ник.</param>
+    /// <remarks>Уникальность проверяет вызывающий: в домене нет доступа к другим пользователям.</remarks>
+    public void ChangeUsername(string? username)
+    {
+        var normalized = NormalizeUsername(username);
+        if (!string.IsNullOrWhiteSpace(username) && !IsValidUsername(normalized))
+            throw new ArgumentException("invalid username passed", nameof(username));
+
+        Username = normalized;
+    }
+
+    /// <summary>Обрезает пробелы и ведущий <c>@</c>, приводит к нижнему регистру; пустое — <c>null</c>.</summary>
+    public static string? NormalizeUsername(string? username)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+            return null;
+
+        var normalized = username.Trim().TrimStart('@').ToLowerInvariant();
+        return normalized.Length == 0 ? null : normalized;
+    }
+
+    /// <param name="normalized">Результат <see cref="NormalizeUsername"/>.</param>
+    public static bool IsValidUsername(string? normalized)
+    {
+        return normalized is { Length: >= UsernameMinLength and <= UsernameMaxLength }
+               && System.Text.RegularExpressions.Regex.IsMatch(normalized, UsernamePattern);
     }
 
     public bool HasRole(UserRole role)

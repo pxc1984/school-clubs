@@ -172,4 +172,40 @@ public class UserTests
         user.ConsentAcceptedAt.ShouldBe(acceptedAt);
         user.ConsentIp.ShouldBe("10.0.0.1");
     }
+
+    [Test]
+    public void ChangeUsername_NormalizesAtAndCase()
+    {
+        var user = new User();
+
+        user.ChangeUsername(" @Anna_Ivanova ");
+
+        user.Username.ShouldBe("anna_ivanova");
+    }
+
+    [TestCase(null)]
+    [TestCase("")]
+    [TestCase("  ")]
+    public void ChangeUsername_Blank_Clears(string? username)
+    {
+        var user = new User();
+        user.ChangeUsername("anna");
+
+        user.ChangeUsername(username);
+
+        user.Username.ShouldBeNull();
+    }
+
+    [TestCase("ab")]
+    [TestCase("@")]
+    [TestCase("анна")]
+    [TestCase("anna ivanova")]
+    [TestCase("_anna")]
+    [TestCase("a23456789012345678901234567890123")]
+    public void ChangeUsername_Invalid_Throws(string username)
+    {
+        var user = new User();
+
+        Should.Throw<ArgumentException>(() => user.ChangeUsername(username));
+    }
 }

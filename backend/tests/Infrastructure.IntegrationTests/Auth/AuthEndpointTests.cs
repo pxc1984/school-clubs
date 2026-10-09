@@ -208,4 +208,28 @@ public class AuthEndpointTests : TestBase
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         return json.RootElement.TryGetProperty("code", out var code) ? code.GetString() : null;
     }
+
+    [Test]
+    public async Task ChangeUsername_SetsNormalized_RejectsTakenAndInvalid_Clears()
+    {
+        var (other, _) = await LoginAsAsync(UserRole.Parent);
+        (await other.PutAsJsonAsync("/api/v1/account/username", new ChangeUsernameRequest("taken")))
+            .EnsureSuccessStatusCode();
+        var (client, _) = await LoginAsAsync(UserRole.Parent);
+
+        var response = await client.PutAsJsonAsync("/api/v1/account/username", new ChangeUsernameRequest("@Anna"));
+        response.EnsureSuccessStatusCode();
+        (await response.Content.ReadFromJsonAsync<AccountDto>())!.Username.ShouldBe("anna");
+        (await client.PutAsJsonAsync("/api/v1/account/username", new ChangeUsernameRequest("anna")))
+            .EnsureSuccessStatusCode();
+
+        (await client.PutAsJsonAsync("/api/v1/account/username", new ChangeUsernameRequest("TAKEN")))
+            .StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        (await client.PutAsJsonAsync("/api/v1/account/username", new ChangeUsernameRequest("a b")))
+            .StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+
+        (await client.PutAsJsonAsync("/api/v1/account/username", new ChangeUsernameRequest(null)))
+            .EnsureSuccessStatusCode();
+        (await client.GetFromJsonAsync<AccountDto>("/api/v1/account"))!.Username.ShouldBeNull();
+    }
 }

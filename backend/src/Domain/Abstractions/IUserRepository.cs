@@ -7,6 +7,8 @@ public interface IUserRepository : IRepository<User>
 {
     Task<User?> FindByEmailAsync(string email, CancellationToken cancellationToken = default);
 
+    Task<User?> FindByUsernameAsync(string username, CancellationToken cancellationToken = default);
+
     /// <summary>Пользователь вместе с детьми.</summary>
     Task<User?> GetWithChildrenAsync(Guid id, CancellationToken cancellationToken = default);
 

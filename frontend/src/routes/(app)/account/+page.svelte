@@ -5,11 +5,12 @@
     import { invalidateAll } from "$app/navigation";
     import {
         changePassword,
+        changeUsername,
         unlinkProvider,
         updateAccount,
     } from "$lib/api/account";
     import { externalLoginUrl } from "$lib/api/auth";
-    import { errorMessage, fieldErrors } from "$lib/api/client";
+    import { errorMessage, fieldErrors, statusOf } from "$lib/api/client";
     import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
     import PageHeader from "$lib/components/page-header.svelte";
     import { Badge } from "$lib/components/ui/badge";
@@ -65,6 +66,33 @@
                 toast.error(errorMessage(e));
         } finally {
             savingProfile = false;
+        }
+    }
+
+    let username = $state("");
+    $effect.pre(() => {
+        if (account) username = account.username ?? "";
+    });
+    let usernameError = $state("");
+    let savingUsername = $state(false);
+
+    async function saveUsername(event: SubmitEvent) {
+        event.preventDefault();
+        savingUsername = true;
+        usernameError = "";
+        try {
+            const updated = await changeUsername(username.trim() || null);
+            username = updated.username ?? "";
+            await invalidateAll();
+            toast.success(updated.username ? "Ник сохранён" : "Ник удалён");
+        } catch (e) {
+            usernameError =
+                statusOf(e) === 409
+                    ? "Этот ник уже занят"
+                    : (fieldErrors(e).username ?? "");
+            if (!usernameError) toast.error(errorMessage(e));
+        } finally {
+            savingUsername = false;
         }
     }
 
@@ -162,6 +190,46 @@
                 <div>
                     <Button type="submit" disabled={savingProfile}>
                         {#if savingProfile}<Spinner />{/if}
+                        Сохранить
+                    </Button>
+                </div>
+            </form>
+        </section>
+
+        <Separator class="my-8" />
+
+        <section class="flex flex-col gap-4">
+            <div>
+                <h2 class="text-lg font-semibold">Ник</h2>
+                <p class="text-sm text-muted-foreground">
+                    Необязательно. Если не задан, подставится ник из Telegram
+                    или логин Яндекса при входе через них.
+                </p>
+            </div>
+            <form onsubmit={saveUsername} class="flex max-w-sm flex-col gap-4">
+                <Field.Field data-invalid={!!usernameError}>
+                    <Field.Label for="username">Ник</Field.Label>
+                    <div class="relative">
+                        <span
+                            class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
+                            aria-hidden="true">@</span
+                        >
+                        <Input
+                            id="username"
+                            class="pl-7"
+                            autocomplete="username"
+                            maxlength={33}
+                            bind:value={username}
+                        />
+                    </div>
+                    <Field.Description>
+                        3–32 символа: латиница, цифры, «_», «.», «-».
+                    </Field.Description>
+                    <Field.Error>{usernameError}</Field.Error>
+                </Field.Field>
+                <div>
+                    <Button type="submit" disabled={savingUsername}>
+                        {#if savingUsername}<Spinner />{/if}
                         Сохранить
                     </Button>
                 </div>

@@ -8,9 +8,12 @@ namespace SchoolClubs.Infrastructure.IntegrationTests.Auth;
 /// <summary>Логика входа через внешний провайдер — без самого OIDC-редиректа.</summary>
 public class ExternalLoginTests : TestBase
 {
-    private static ExternalIdentity Identity(string subject, string? email = null, bool verified = false)
+    private static ExternalIdentity Identity(string subject,
+        string? email = null,
+        bool verified = false,
+        string? username = null)
     {
-        return new ExternalIdentity("yandex", subject, email, verified, "Анна", "Иванова", null);
+        return new ExternalIdentity("yandex", subject, email, verified, "Анна", "Иванова", null, username);
     }
 
     private static Task<SessionDto> LoginAsync(ExternalIdentity identity)
@@ -71,5 +74,34 @@ public class ExternalLoginTests : TestBase
         await LoginAsync(Identity("ya-5", "taken@school218.ru", verified: true));
         var untouched = await InScope(sp => sp.GetRequiredService<IUserRepository>().FindByIdAsync(other.UserId!.Value));
         untouched!.HasEmail.ShouldBeFalse();
+    }
+
+    [Test]
+    public async Task NewIdentity_TakesProviderUsername_UnlessTakenOrInvalid()
+    {
+        var first = await LoginAsync(Identity("tg-1", username: "Anna_Iv"));
+        var taken = await LoginAsync(Identity("tg-2", username: "anna_iv"));
+        var invalid = await LoginAsync(Identity("tg-3", username: "анна"));
+
+        (await FindUserAsync(first)).Username.ShouldBe("anna_iv");
+        (await FindUserAsync(taken)).Username.ShouldBeNull();
+        (await FindUserAsync(invalid)).Username.ShouldBeNull();
+    }
+
+    [Test]
+    public async Task LinkedAccount_GetsUsernameOnNextLogin_ButKeepsOwn()
+    {
+        var session = await LoginAsync(Identity("tg-4"));
+        await LoginAsync(Identity("tg-4", username: "anna"));
+        (await FindUserAsync(session)).Username.ShouldBe("anna");
+
+        await LoginAsync(Identity("tg-4", username: "renamed"));
+        (await FindUserAsync(session)).Username.ShouldBe("anna");
+    }
+
+    private static async Task<User> FindUserAsync(SessionDto session)
+    {
+        var user = await InScope(sp => sp.GetRequiredService<IUserRepository>().FindByIdAsync(session.UserId!.Value));
+        return user!;
     }
 }

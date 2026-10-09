@@ -20,6 +20,13 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasIndex(u => u.Email);
 
         builder
+            .Property(u => u.Username)
+            .HasColumnName("username")
+            .HasMaxLength(User.UsernameMaxLength);
+        // Ник хранится в нижнем регистре (см. User.ChangeUsername); NULL в уникальном индексе не конфликтуют.
+        builder.HasIndex(u => u.Username).IsUnique();
+
+        builder
             .Property(u => u.Phone)
             .HasColumnName("phone")
             .HasMaxLength(32);

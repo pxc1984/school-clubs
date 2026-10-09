@@ -17,6 +17,14 @@ public class UserRepository(DbContext dbContext) : Repository<User>(dbContext), 
         return await DbSet.FirstOrDefaultAsync(u => u.Email == address, cancellationToken);
     }
 
+    public async Task<User?> FindByUsernameAsync(string username, CancellationToken cancellationToken = default)
+    {
+        if (User.NormalizeUsername(username) is not { } normalized)
+            return null;
+
+        return await DbSet.FirstOrDefaultAsync(u => u.Username == normalized, cancellationToken);
+    }
+
     public async Task<User?> GetWithChildrenAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await DbSet

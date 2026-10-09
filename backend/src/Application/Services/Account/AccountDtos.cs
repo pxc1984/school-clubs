@@ -8,9 +8,13 @@ public record AccountDto(
     string MiddleName,
     string LastName,
     string Email,
+    string? Username,
     string? Phone,
     IReadOnlyList<UserRole> Roles,
     IReadOnlyList<string> LoginProviders);
 
 /// <param name="Accept">Чекбокс «Согласен с политикой обработки персональных данных».</param>
 public record AcceptConsentRequest(bool Accept);
+
+/// <param name="Username">Ник; ведущий <c>@</c> и регистр не важны. <c>null</c> или пусто — убрать.</param>
+public record ChangeUsernameRequest(string? Username);

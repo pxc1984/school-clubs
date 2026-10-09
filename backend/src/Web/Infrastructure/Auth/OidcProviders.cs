@@ -44,7 +44,7 @@ public class OidcProviderOptions
 
     /// <summary>
     /// OAuth 2.0: стандартный клейм (<c>sub</c>, <c>email</c>, <c>email_verified</c>, <c>given_name</c>,
-    /// <c>family_name</c>, <c>middle_name</c>) → JSON-ключ ответа <see cref="UserInfoEndpoint"/>.
+    /// <c>family_name</c>, <c>middle_name</c>, <c>preferred_username</c>) → JSON-ключ ответа <see cref="UserInfoEndpoint"/>.
     /// </summary>
     public Dictionary<string, string> ClaimKeys { get; set; } = new();
 
@@ -154,7 +154,8 @@ public class OidcProviderRegistry
             emailVerified,
             principal.FindFirstValue("given_name"),
             principal.FindFirstValue("family_name"),
-            principal.FindFirstValue("middle_name"));
+            principal.FindFirstValue("middle_name"),
+            principal.FindFirstValue("preferred_username"));
     }
 }
 

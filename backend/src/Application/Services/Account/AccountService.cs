@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.Extensions.Options;
+using SchoolClubs.Application.Common.Exceptions;
 using SchoolClubs.Application.Common.Interfaces;
 using SchoolClubs.Application.Common.Options;
 using SchoolClubs.Application.Services.Auth;
@@ -17,7 +18,8 @@ public class AccountService(
     IAuthService authService,
     IOptions<AuthOptions> options,
     TimeProvider timeProvider,
-    IValidator<AcceptConsentRequest> consentValidator) : IAccountService
+    IValidator<AcceptConsentRequest> consentValidator,
+    IValidator<ChangeUsernameRequest> usernameValidator) : IAccountService
 {
     public async Task<AccountDto> GetAsync(CancellationToken cancellationToken = default)
     {
@@ -25,7 +27,24 @@ public class AccountService(
         var providers = (await logins.ListByUserAsync(user.Id, cancellationToken)).Select(l => l.Provider).ToList();
 
         return new AccountDto(user.Id, user.FirstName, user.MiddleName, user.LastName, user.Email.Address,
-            user.Phone, user.Roles.Order().ToList(), providers);
+            user.Username, user.Phone, user.Roles.Order().ToList(), providers);
+    }
+
+    public async Task<AccountDto> ChangeUsernameAsync(ChangeUsernameRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await usernameValidator.ValidateAsync(request, cancellationToken);
+        if (!result.IsValid) throw new ValidationException(result.Errors);
+
+        var user = await GetCurrentUserAsync();
+        if (User.NormalizeUsername(request.Username) is { } username
+            && await users.FindByUsernameAsync(username, cancellationToken) is { } owner
+            && owner.Id != user.Id)
+            throw new ConflictException("username is already taken");
+
+        user.ChangeUsername(request.Username);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return await GetAsync(cancellationToken);
     }
 
     public async Task<SessionDto> AcceptConsentAsync(AcceptConsentRequest request,

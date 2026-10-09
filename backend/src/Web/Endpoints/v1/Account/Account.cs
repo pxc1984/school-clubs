@@ -9,6 +9,7 @@ public static class Account
     public static void Map(RouteGroupBuilder group)
     {
         group.MapGet("/", Get).RequireAuthorization(Policies.Consent);
+        group.MapPut("/username", ChangeUsername).RequireAuthorization(Policies.Consent);
         // Единственный эндпоинт (кроме /auth/*), доступный до принятия согласия.
         group.MapPost("/consent", AcceptConsent);
     }
@@ -17,6 +18,14 @@ public static class Account
     public static async Task<AccountDto> Get(IAccountService service, CancellationToken cancellationToken)
     {
         return await service.GetAsync(cancellationToken);
+    }
+
+    [EndpointSummary("Set or clear the current user's username")]
+    public static async Task<AccountDto> ChangeUsername(IAccountService service,
+        ChangeUsernameRequest request,
+        CancellationToken cancellationToken)
+    {
+        return await service.ChangeUsernameAsync(request, cancellationToken);
     }
 
     [EndpointSummary("Accept the current personal data policy")]

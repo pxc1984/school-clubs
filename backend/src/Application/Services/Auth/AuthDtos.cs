@@ -40,6 +40,7 @@ public record ServiceAdminLoginRequest(string Password);
 /// <param name="Provider">Имя провайдера из конфига (<c>yandex</c>).</param>
 /// <param name="Subject">Claim <c>sub</c>.</param>
 /// <param name="EmailVerified">Провайдер ручается за email — только тогда по нему можно найти существующий аккаунт.</param>
+/// <param name="Username">Claim <c>preferred_username</c> (ник в Telegram, логин в Яндексе).</param>
 public record ExternalIdentity(
     string Provider,
     string Subject,
@@ -47,4 +48,5 @@ public record ExternalIdentity(
     bool EmailVerified,
     string? FirstName,
     string? LastName,
-    string? MiddleName);
+    string? MiddleName,
+    string? Username = null);

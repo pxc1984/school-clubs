@@ -86,6 +86,7 @@ public class AuthService(
         {
             var linked = await users.FindByIdAsync(login.UserId) ?? throw new UnauthorizedAccessException();
             await FillMissingEmailAsync(linked, identity, cancellationToken);
+            await FillMissingUsernameAsync(linked, identity, cancellationToken);
             return await CompleteLoginAsync(linked, login, cancellationToken);
         }
 
@@ -102,6 +103,7 @@ public class AuthService(
             await users.AddAsync(user, cancellationToken);
         }
 
+        await FillMissingUsernameAsync(user, identity, cancellationToken);
         login = UserLogin.ForExternal(user, identity.Provider, identity.Subject);
         await logins.AddAsync(login, cancellationToken);
         return await CompleteLoginAsync(user, login, cancellationToken);
@@ -161,6 +163,21 @@ public class AuthService(
             return;
 
         user.ChangeEmail(email);
+    }
+
+    /// <summary>
+    /// Ник провайдера достаётся пользователю без ника — если он годится по формату и не занят.
+    /// Заданный пользователем ник не перезаписываем.
+    /// </summary>
+    private async Task FillMissingUsernameAsync(User user, ExternalIdentity identity,
+        CancellationToken cancellationToken)
+    {
+        if (user.Username is not null || User.NormalizeUsername(identity.Username) is not { } username)
+            return;
+        if (!User.IsValidUsername(username) || await users.FindByUsernameAsync(username, cancellationToken) is not null)
+            return;
+
+        user.ChangeUsername(username);
     }
 
     private async Task<SessionDto> CompleteLoginAsync(User user, UserLogin login, CancellationToken cancellationToken)

@@ -1,6 +1,7 @@
 using FluentValidation;
 using SchoolClubs.Application.Services.Account;
 using SchoolClubs.Application.Services.Auth;
+using SchoolClubs.Domain.Entities.Users;
 
 namespace SchoolClubs.Application.Validators;
 
@@ -38,6 +39,18 @@ public class AcceptConsentRequestValidator : AbstractValidator<AcceptConsentRequ
         RuleFor(r => r.Accept)
             .Equal(true)
             .WithMessage("Нужно согласие на обработку персональных данных.");
+    }
+}
+
+public class ChangeUsernameRequestValidator : AbstractValidator<ChangeUsernameRequest>
+{
+    public ChangeUsernameRequestValidator()
+    {
+        RuleFor(r => r.Username)
+            .Must(username => string.IsNullOrWhiteSpace(username)
+                              || User.IsValidUsername(User.NormalizeUsername(username)))
+            .WithMessage($"От {User.UsernameMinLength} до {User.UsernameMaxLength} символов: латиница, цифры, "
+                         + "«_», «.», «-»; начинается с буквы или цифры.");
     }
 }
 

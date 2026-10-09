@@ -622,7 +622,15 @@ namespace SchoolClubs.Infrastructure.Data.Migrations
                         .HasColumnType("character varying(32)")
                         .HasColumnName("security_stamp");
 
+                    b.Property<string>("Username")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("username");
+
                     b.HasIndex("Email");
+
+                    b.HasIndex("Username")
+                        .IsUnique();
 
                     b.HasDiscriminator().HasValue("user");
                 });
