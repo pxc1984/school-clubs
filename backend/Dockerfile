@@ -17,9 +17,12 @@ RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
 # Layer 2: source
 COPY src/ src/
 
+# Исходники остаются в стадии build — в итоговый образ попадает только /app/publish.
+# DebugType=none: не кладём .pdb (в них пути к исходникам), UseAppHost=false: запуск через `dotnet`.
 WORKDIR /src/src/Web
 RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
-    dotnet publish Web.csproj -c Release -o /app/publish --no-restore /p:UseAppHost=false
+    dotnet publish Web.csproj -c Release -o /app/publish --no-restore \
+    -p:DebugType=none -p:DebugSymbols=false -p:UseAppHost=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
