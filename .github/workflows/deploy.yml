@@ -61,6 +61,14 @@ jobs:
             cd '${DEPLOY_PATH}'
             echo '${GITHUB_TOKEN}' | docker login ghcr.io -u '${GITHUB_ACTOR}' --password-stdin >/dev/null
             trap 'docker logout ghcr.io >/dev/null' EXIT
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --pull always --no-build --remove-orphans --wait
+            COMPOSE='docker compose -f docker-compose.yml -f docker-compose.prod.yml'
+            # Отдельный pull с повторами: up --pull always может молча бросить недокачанный образ
+            # и упасть потом на «No such image».
+            for attempt in 1 2 3; do
+              \$COMPOSE pull --quiet && break
+              [ "\$attempt" = 3 ] && exit 1
+              sleep 10
+            done
+            \$COMPOSE up -d --no-build --remove-orphans --wait
             docker image prune -f
           EOF
