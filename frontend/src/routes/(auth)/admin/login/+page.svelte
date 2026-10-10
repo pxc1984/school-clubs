@@ -6,7 +6,7 @@
     import * as Alert from "$lib/components/ui/alert";
     import { Button } from "$lib/components/ui/button";
     import * as Field from "$lib/components/ui/field";
-    import { Input } from "$lib/components/ui/input";
+    import PasswordInput from "$lib/components/password-input.svelte";
     import { Spinner } from "$lib/components/ui/spinner";
     import { session } from "$lib/session.svelte";
 
@@ -57,9 +57,8 @@
     {/if}
     <Field.Field>
         <Field.Label for="password">Пароль администратора</Field.Label>
-        <Input
+        <PasswordInput
             id="password"
-            type="password"
             autocomplete="current-password"
             required
             bind:value={password}

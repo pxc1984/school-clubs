@@ -14,6 +14,7 @@
     import ConsentCheckbox from "$lib/components/consent-checkbox.svelte";
     import * as Field from "$lib/components/ui/field";
     import { Input } from "$lib/components/ui/input";
+    import PasswordInput from "$lib/components/password-input.svelte";
     import { Spinner } from "$lib/components/ui/spinner";
     import { ACCOUNT_CONSENT_PREFIX } from "$lib/legal";
     import { session } from "$lib/session.svelte";
@@ -156,9 +157,8 @@
         </Field.Field>
         <Field.Field data-invalid={!!errors.password}>
             <Field.Label for="password">Пароль</Field.Label>
-            <Input
+            <PasswordInput
                 id="password"
-                type="password"
                 autocomplete="new-password"
                 required
                 minlength={MIN_PASSWORD_LENGTH}

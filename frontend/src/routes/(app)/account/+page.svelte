@@ -26,6 +26,7 @@
     import { Button } from "$lib/components/ui/button";
     import * as Field from "$lib/components/ui/field";
     import { Input } from "$lib/components/ui/input";
+    import PasswordInput from "$lib/components/password-input.svelte";
     import * as NativeSelect from "$lib/components/ui/native-select";
     import { Separator } from "$lib/components/ui/separator";
     import { Spinner } from "$lib/components/ui/spinner";
@@ -435,9 +436,8 @@
                             <Field.Label for="current">
                                 Текущий пароль
                             </Field.Label>
-                            <Input
+                            <PasswordInput
                                 id="current"
-                                type="password"
                                 autocomplete="current-password"
                                 required
                                 bind:value={password.current}
@@ -449,9 +449,8 @@
                     {/if}
                     <Field.Field data-invalid={!!passwordErrors.newPassword}>
                         <Field.Label for="next">Новый пароль</Field.Label>
-                        <Input
+                        <PasswordInput
                             id="next"
-                            type="password"
                             autocomplete="new-password"
                             required
                             bind:value={password.next}
@@ -460,9 +459,8 @@
                     </Field.Field>
                     <Field.Field data-invalid={!!passwordErrors.repeat}>
                         <Field.Label for="repeat">Повторите пароль</Field.Label>
-                        <Input
+                        <PasswordInput
                             id="repeat"
-                            type="password"
                             autocomplete="new-password"
                             required
                             bind:value={password.repeat}
