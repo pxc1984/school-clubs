@@ -26,7 +26,7 @@
 </script>
 
 <nav
-    class="-mt-2 mb-6 flex gap-1 overflow-x-auto border-b pb-2"
+    class="-mt-2 mb-6 flex flex-wrap gap-1 border-b pb-2"
     aria-label="Администрирование"
 >
     {#each LINKS as link (link.href)}
