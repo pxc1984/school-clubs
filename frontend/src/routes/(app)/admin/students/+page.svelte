@@ -117,7 +117,7 @@
                 <Table.Row>
                     <Table.Head>ФИО</Table.Head>
                     <Table.Head>Класс</Table.Head>
-                    <Table.Head>Группы</Table.Head>
+                    <Table.Head class="hidden sm:table-cell">Группы</Table.Head>
                 </Table.Row>
             </Table.Header>
             <Table.Body>
@@ -140,11 +140,21 @@
                             >
                                 {fullName(student)}
                             </button>
+                            <!-- на телефоне колонки «Группы» нет -->
+                            {#if student.groups.length}
+                                <div
+                                    class="mt-1 truncate text-xs text-muted-foreground sm:hidden"
+                                >
+                                    {student.groups
+                                        .map((group) => group.title)
+                                        .join(", ")}
+                                </div>
+                            {/if}
                         </Table.Cell>
                         <Table.Cell class="text-muted-foreground">
                             {student.grade ?? "—"}
                         </Table.Cell>
-                        <Table.Cell>
+                        <Table.Cell class="hidden sm:table-cell">
                             <div class="flex flex-wrap gap-1">
                                 {#each student.groups as group (group.id)}
                                     <Badge

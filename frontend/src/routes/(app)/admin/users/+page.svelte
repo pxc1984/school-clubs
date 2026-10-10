@@ -124,7 +124,7 @@
             <Table.Header>
                 <Table.Row>
                     <Table.Head>ФИО</Table.Head>
-                    <Table.Head>Email</Table.Head>
+                    <Table.Head class="hidden sm:table-cell">Email</Table.Head>
                     <Table.Head>Роли</Table.Head>
                 </Table.Row>
             </Table.Header>
@@ -153,8 +153,16 @@
                                     заблокирован
                                 </Badge>
                             {/if}
+                            <!-- на телефоне колонки «Email» нет -->
+                            <div
+                                class="mt-0.5 max-w-52 truncate text-xs text-muted-foreground sm:hidden"
+                            >
+                                {user.email}
+                            </div>
                         </Table.Cell>
-                        <Table.Cell class="text-muted-foreground">
+                        <Table.Cell
+                            class="hidden text-muted-foreground sm:table-cell"
+                        >
                             {user.email}
                         </Table.Cell>
                         <Table.Cell>
