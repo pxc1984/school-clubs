@@ -1,6 +1,7 @@
 using SchoolClubs.Web.Endpoints.v1.Account;
 using SchoolClubs.Web.Endpoints.v1.Admin;
 using SchoolClubs.Web.Endpoints.v1.Avatars;
+using SchoolClubs.Web.Endpoints.v1.ChildInvites;
 using SchoolClubs.Web.Endpoints.v1.Parent;
 using SchoolClubs.Web.Endpoints.v1.Teacher;
 using SchoolClubs.Web.Endpoints.v1.TodoItems;
@@ -60,6 +61,16 @@ public static class WebApplicationExtensions
             .MapGroup("/students")
             .RequireAuthorization(Policies.Admin)
             .WithTags("Admin: students"));
+        AdminChildInvites.Map(admin
+            .MapGroup("/students/{studentId:guid}/invites")
+            .RequireAuthorization(Policies.Admin)
+            .WithTags("Admin: students"));
+
+        // Переходит по ссылке любой пользователь с аккаунтом: роль Parent выдаётся при привязке.
+        ChildInvites.Map(v1
+            .MapGroup("/child-invites")
+            .RequireAuthorization(Policies.User, Policies.Consent)
+            .WithTags("Child invites"));
 
         var parent = v1.MapGroup("/parent").RequireAuthorization(Policies.Parent);
         ParentAccessRequests.Map(parent

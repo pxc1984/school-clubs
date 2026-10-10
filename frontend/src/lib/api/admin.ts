@@ -144,6 +144,14 @@ export type ParsedNameDto = {
     matches: StudentDto[];
 };
 
+/** Одноразовая ссылка-приглашение: перешедший по ней родитель получает доступ к ребёнку */
+export type ChildInviteDto = {
+    id: Guid;
+    token: string;
+    created: DateTimeString;
+    expiresAt: DateTimeString;
+};
+
 export type MergeStudentsResultDto = {
     targetId: Guid;
     movedEntries: number;
@@ -411,6 +419,37 @@ export async function mergeStudents(
         `/admin/students/${sourceId}/merge-into/${targetId}`,
     );
     return response.data;
+}
+
+/** Действующие (неиспользованные, неотозванные, неистёкшие) ссылки ученика */
+export async function listStudentInvites(
+    studentId: Guid,
+): Promise<ChildInviteDto[]> {
+    const response = await api.get<ChildInviteDto[]>(
+        `/admin/students/${studentId}/invites`,
+    );
+    return response.data;
+}
+
+export async function createStudentInvite(
+    studentId: Guid,
+): Promise<ChildInviteDto> {
+    const response = await api.post<ChildInviteDto>(
+        `/admin/students/${studentId}/invites`,
+    );
+    return response.data;
+}
+
+export async function revokeStudentInvite(
+    studentId: Guid,
+    inviteId: Guid,
+): Promise<void> {
+    await api.delete(`/admin/students/${studentId}/invites/${inviteId}`);
+}
+
+/** Ссылка, которую админ отправляет родителю */
+export function inviteUrl(invite: ChildInviteDto): string {
+    return `${window.location.origin}/invite/${invite.token}`;
 }
 
 export async function parseNames(text: string): Promise<ParsedNameDto[]> {

@@ -17,6 +17,7 @@
     import ConfirmDialog from "$lib/components/confirm-dialog.svelte";
     import EraseStudentDialog from "$lib/components/erase-student-dialog.svelte";
     import SearchPicker from "$lib/components/search-picker.svelte";
+    import StudentInvites from "$lib/components/student-invites.svelte";
     import StudentDialog, {
         type StudentForm,
     } from "$lib/components/student-dialog.svelte";
@@ -165,6 +166,8 @@
                         <p class="text-muted-foreground">Нет.</p>
                     {/if}
                 </section>
+
+                <StudentInvites studentId={student.id} />
 
                 <Separator />
 

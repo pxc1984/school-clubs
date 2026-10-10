@@ -1,7 +1,13 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
+    import { page } from "$app/state";
     import { register } from "$lib/api/auth";
-    import { errorMessage, fieldErrors, statusOf } from "$lib/api/client";
+    import {
+        errorMessage,
+        fieldErrors,
+        safeReturnUrl,
+        statusOf,
+    } from "$lib/api/client";
     import ExternalLogins from "$lib/components/external-logins.svelte";
     import * as Alert from "$lib/components/ui/alert";
     import { Button } from "$lib/components/ui/button";
@@ -13,6 +19,11 @@
     import { session } from "$lib/session.svelte";
 
     const MIN_PASSWORD_LENGTH = 8;
+
+    // например, ссылка-приглашение от админа: после регистрации вернёмся на неё
+    const returnUrl = $derived(
+        safeReturnUrl(page.url.searchParams.get("returnUrl")),
+    );
 
     let form = $state({
         lastName: "",
@@ -56,7 +67,7 @@
                 acceptPersonalDataPolicy: consent,
             });
             await session.load(true);
-            await goto("/parent");
+            await goto(returnUrl ?? "/parent");
         } catch (e) {
             errors = fieldErrors(e);
             error =
@@ -79,7 +90,7 @@
 </p>
 
 <ExternalLogins
-    returnUrl="/parent"
+    returnUrl={returnUrl ?? "/parent"}
     verb="Зарегистрироваться"
     separator="или по email"
 />
@@ -174,5 +185,10 @@
 
 <p class="mt-6 text-center text-sm text-muted-foreground">
     Уже есть аккаунт?
-    <a href="/login" class="font-medium text-foreground underline">Войти</a>
+    <a
+        href={returnUrl
+            ? `/login?returnUrl=${encodeURIComponent(returnUrl)}`
+            : "/login"}
+        class="font-medium text-foreground underline">Войти</a
+    >
 </p>

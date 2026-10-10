@@ -52,6 +52,13 @@ public class ProblemDetailsExceptionHandler : IExceptionHandler
                 Type = "https://tools.ietf.org/html/rfc9110#section-15.5.10",
                 Detail = se.Message,
             }),
+            ChildInviteStateException ie => (StatusCodes.Status410Gone, WithCode(new ProblemDetails
+            {
+                Status = StatusCodes.Status410Gone,
+                Title = "Gone",
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.11",
+                Detail = ie.Message,
+            }, "invite_inactive")),
             // Запрос не разобрать: битый JSON, неизвестное значение enum, не тот тип параметра.
             BadHttpRequestException be => (be.StatusCode, new ProblemDetails
             {

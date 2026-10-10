@@ -51,6 +51,7 @@ public static class DependencyInjection
         builder.Services.AddScoped<IUserLoginRepository, UserLoginRepository>();
         builder.Services.AddScoped<IStudentRepository, StudentRepository>();
         builder.Services.AddScoped<IAccessRequestRepository, AccessRequestRepository>();
+        builder.Services.AddScoped<IChildInviteRepository, ChildInviteRepository>();
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
         builder.Services.AddScoped<IStudentStatisticsQuery, StudentStatisticsQuery>();
 

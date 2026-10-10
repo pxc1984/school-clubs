@@ -178,3 +178,19 @@ export async function createAccessRequest(
 export async function cancelAccessRequest(id: Guid): Promise<void> {
     await api.delete(`/parent/access-requests/${id}`);
 }
+
+export type AcceptedChildInviteDto = {
+    student: StudentDto;
+    /** Ребёнок уже был привязан к этому аккаунту */
+    alreadyLinked: boolean;
+};
+
+/** Переход по ссылке от админа; доступен любому пользователю, роль родителя выдаётся сервером */
+export async function acceptChildInvite(
+    token: string,
+): Promise<AcceptedChildInviteDto> {
+    const response = await api.post<AcceptedChildInviteDto>(
+        `/child-invites/${encodeURIComponent(token)}/accept`,
+    );
+    return response.data;
+}

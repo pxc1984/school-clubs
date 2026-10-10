@@ -42,7 +42,12 @@
         try {
             await login({ email: email.trim(), password });
             const me = await session.load(true);
-            if (me?.consentRequired) await goto("/consent");
+            if (me?.consentRequired)
+                await goto(
+                    returnUrl
+                        ? `/consent?returnUrl=${encodeURIComponent(returnUrl)}`
+                        : "/consent",
+                );
             else await goto(returnUrl ?? session.homeHref());
         } catch (e) {
             const problem = problemOf(e);
@@ -105,7 +110,12 @@
 
 <p class="mt-6 text-center text-sm text-muted-foreground">
     Нет аккаунта?
-    <a href="/register" class="font-medium text-foreground underline">
+    <a
+        href={returnUrl
+            ? `/register?returnUrl=${encodeURIComponent(returnUrl)}`
+            : "/register"}
+        class="font-medium text-foreground underline"
+    >
         Зарегистрироваться
     </a>
 </p>
