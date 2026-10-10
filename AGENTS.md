@@ -28,7 +28,8 @@ DI: `AddApplicationServices` / `AddInfrastructureServices` / `AddWebServices` (�
 
 SvelteKit + adapter-node, Svelte 5 runes, Tailwind 4, axios-клиент в `$lib/api/client.ts`, по файлу API на фичу.
 Запросы идут на same-origin `/api` (в Docker — traefik, локально — vite proxy на `API_SSR_URL`, по умолч. `:5213`).
-pnpm; `pnpm run check` перед коммитом.
+pnpm; `pnpm run check` и `pnpm test` перед коммитом. Тесты — vitest + Testing Library (jsdom), файлы
+`*.test.ts` рядом с компонентом/страницей; `$app/*`, API-модули и `session` мокаются через `vi.mock`.
 
 ## Конвенции
 
