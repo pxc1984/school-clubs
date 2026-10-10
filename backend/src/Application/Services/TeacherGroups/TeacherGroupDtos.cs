@@ -4,6 +4,7 @@ using SchoolClubs.Domain.Entities.Gradebook;
 namespace SchoolClubs.Application.Services.TeacherGroups;
 
 /// <param name="UnfilledLessonCount">Прошедшие занятия (включая сегодня) с неполностью заполненным журналом.</param>
+/// <param name="UnpublishedLessonCount">Прошедшие занятия с заполненным, но не опубликованным журналом — родители его не видят.</param>
 public record TeacherGroupCardDto(
     Guid Id,
     string Title,
@@ -11,7 +12,8 @@ public record TeacherGroupCardDto(
     int StudentCount,
     DateOnly? LastLessonDate,
     DateOnly? NextLessonDate,
-    int UnfilledLessonCount);
+    int UnfilledLessonCount,
+    int UnpublishedLessonCount);
 
 /// <param name="FilledPercent">
 /// Доля заполненных ячеек «ученик × задача» для текущего состава, 0–100;

@@ -1,5 +1,6 @@
 <script lang="ts">
     import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
+    import EyeOffIcon from "@lucide/svelte/icons/eye-off";
     import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
     import UsersIcon from "@lucide/svelte/icons/users";
     import type { DateOnly } from "$lib/api/types";
@@ -59,6 +60,19 @@
                                             "журнал не заполнен",
                                             "журнала не заполнены",
                                             "журналов не заполнены",
+                                        ])}
+                                    </Badge>
+                                {/if}
+                                {#if group.unpublishedLessonCount}
+                                    <Badge
+                                        variant="outline"
+                                        title="Родители увидят отметки после публикации"
+                                    >
+                                        <EyeOffIcon />
+                                        {countOf(group.unpublishedLessonCount, [
+                                            "журнал не опубликован",
+                                            "журнала не опубликованы",
+                                            "журналов не опубликованы",
                                         ])}
                                     </Badge>
                                 {/if}

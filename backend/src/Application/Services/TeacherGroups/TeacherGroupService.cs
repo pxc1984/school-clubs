@@ -44,7 +44,8 @@ public class TeacherGroupService(
             cards.Add(new TeacherGroupCardDto(group!.Id, group.Title, group.Description, group.Students.Count,
                 overview.Where(l => l.Date <= today).Select(l => (DateOnly?) l.Date).LastOrDefault(),
                 overview.Where(l => l.Date > today).Select(l => (DateOnly?) l.Date).FirstOrDefault(),
-                overview.Count(l => l.Date <= today && l.FilledPercent < 100)));
+                overview.Count(l => l.Date <= today && l.FilledPercent < 100),
+                overview.Count(l => l.Date <= today && l.FilledPercent == 100 && !l.IsPublished)));
         }
 
         return cards;

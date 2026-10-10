@@ -22,6 +22,8 @@ export type TeacherGroupCardDto = {
     nextLessonDate: DateOnly | null;
     /** Прошедшие занятия (включая сегодня) с неполностью заполненным журналом */
     unfilledLessonCount: number;
+    /** Прошедшие занятия с заполненным, но не опубликованным журналом — родители их не видят */
+    unpublishedLessonCount: number;
 };
 
 export type LessonSummaryDto = {

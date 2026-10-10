@@ -281,6 +281,11 @@ public class TeacherEndpointTests : TestBase
         card.LastLessonDate.ShouldBe(Today());
         card.NextLessonDate.ShouldBe(Today().AddDays(7));
         card.UnfilledLessonCount.ShouldBe(1);
+        // Сегодняшний журнал заполнен, но родители его не видят, пока он не опубликован.
+        card.UnpublishedLessonCount.ShouldBe(1);
+        (await _teacher.PostAsync($"{Teacher}/lessons/{filled.Id}/gradebook/publish", null)).EnsureSuccessStatusCode();
+        (await _teacher.GetFromJsonAsync<List<TeacherGroupCardDto>>($"{Teacher}/groups"))
+            .ShouldHaveSingleItem().UnpublishedLessonCount.ShouldBe(0);
 
         var matrix = await _teacher.GetFromJsonAsync<GroupMatrixDto>($"{Teacher}/groups/{_group.Id}/summary");
         matrix!.Lessons.Count.ShouldBe(3);

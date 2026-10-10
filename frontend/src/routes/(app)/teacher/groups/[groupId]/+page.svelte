@@ -184,14 +184,20 @@
                 </Empty.Header>
             </Empty.Root>
         {:else}
-            <div class="overflow-x-auto rounded-lg border">
+            <div class="relative overflow-x-auto rounded-lg border">
                 <Table.Root>
                     <Table.Header>
                         <Table.Row>
                             <Table.Head>Дата</Table.Head>
-                            <Table.Head>Тема</Table.Head>
-                            <Table.Head class="text-right">Задач</Table.Head>
-                            <Table.Head class="w-40">Заполнено</Table.Head>
+                            <Table.Head class="hidden sm:table-cell">
+                                Тема
+                            </Table.Head>
+                            <Table.Head class="hidden text-right md:table-cell">
+                                Задач
+                            </Table.Head>
+                            <Table.Head class="hidden w-40 sm:table-cell">
+                                Заполнено
+                            </Table.Head>
                             <Table.Head>Статус</Table.Head>
                         </Table.Row>
                     </Table.Header>
@@ -210,20 +216,35 @@
                                     >
                                         {formatDate(lesson.date)}
                                     </a>
-                                    <span class="text-muted-foreground">
+                                    <span
+                                        class="hidden text-muted-foreground sm:inline"
+                                    >
                                         {formatWeekday(lesson.date)}
                                         {formatTime(lesson.time)}
                                     </span>
+                                    <!-- на телефоне колонки «Тема» нет — день, время и тема под датой -->
+                                    <span
+                                        class="block max-w-44 truncate text-muted-foreground sm:hidden"
+                                    >
+                                        {[
+                                            `${formatWeekday(lesson.date)} ${formatTime(lesson.time)}`.trim(),
+                                            lesson.topic,
+                                        ]
+                                            .filter(Boolean)
+                                            .join(" · ")}
+                                    </span>
                                 </Table.Cell>
                                 <Table.Cell
-                                    class="max-w-64 truncate text-muted-foreground"
+                                    class="hidden max-w-64 truncate text-muted-foreground sm:table-cell"
                                 >
                                     {lesson.topic ?? "—"}
                                 </Table.Cell>
-                                <Table.Cell class="text-right tabular-nums">
+                                <Table.Cell
+                                    class="hidden text-right tabular-nums md:table-cell"
+                                >
                                     {lesson.taskCount}
                                 </Table.Cell>
-                                <Table.Cell>
+                                <Table.Cell class="hidden sm:table-cell">
                                     <div class="flex items-center gap-2">
                                         <Progress
                                             value={lesson.filledPercent}
@@ -244,10 +265,23 @@
                                         <Badge variant="outline">
                                             Запланировано
                                         </Badge>
+                                    {:else if lesson.filledPercent === 100}
+                                        <Badge
+                                            variant="outline"
+                                            title="Журнал заполнен — опубликуйте, чтобы родители увидели отметки"
+                                        >
+                                            Не опубликован
+                                        </Badge>
                                     {:else}
                                         <Badge variant="secondary">
                                             Черновик
                                         </Badge>
+                                        <!-- на телефоне колонки «Заполнено» нет -->
+                                        <span
+                                            class="text-xs text-muted-foreground tabular-nums sm:hidden"
+                                        >
+                                            {Math.round(lesson.filledPercent)}%
+                                        </span>
                                     {/if}
                                 </Table.Cell>
                             </Table.Row>
@@ -320,7 +354,9 @@
                     </Empty.Header>
                 </Empty.Root>
             {:else}
-                <div class="w-fit max-w-full overflow-x-auto rounded-lg border">
+                <div
+                    class="relative w-fit max-w-full overflow-x-auto rounded-lg border"
+                >
                     <table
                         class="w-max border-separate border-spacing-0 text-sm"
                     >
