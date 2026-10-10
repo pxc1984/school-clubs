@@ -19,6 +19,7 @@
     import GroupDialog from "$lib/components/group-dialog.svelte";
     import PageHeader from "$lib/components/page-header.svelte";
     import SearchPicker from "$lib/components/search-picker.svelte";
+    import StudentSheet from "$lib/components/student-sheet.svelte";
     import { Badge } from "$lib/components/ui/badge";
     import { Button } from "$lib/components/ui/button";
     import * as Dialog from "$lib/components/ui/dialog";
@@ -37,6 +38,8 @@
     let removeTeacherOpen = $state(false);
     let removingStudent = $state<StudentDto | null>(null);
     let removeStudentOpen = $state(false);
+    /** Карточка ученика — прямо здесь, чтобы не терять группу (ссылка для родителя, правка) */
+    let openedStudent = $state<string | null>(null);
 
     async function addTeacher(teacher: { id: string }) {
         try {
@@ -143,14 +146,13 @@
             <ul class="divide-y rounded-lg border">
                 {#each group.students as student (student.id)}
                     <li class="flex items-center gap-2 px-3 py-2 text-sm">
-                        <a
-                            href="/admin/students?q={encodeURIComponent(
-                                student.lastName,
-                            )}"
-                            class="min-w-0 flex-1 truncate hover:underline"
+                        <button
+                            type="button"
+                            class="min-w-0 flex-1 truncate text-left hover:underline"
+                            onclick={() => (openedStudent = student.id)}
                         >
                             {fullName(student)}
-                        </a>
+                        </button>
                         {#if student.grade}
                             <span class="text-muted-foreground">
                                 {student.grade}
@@ -253,5 +255,15 @@
         await deleteGroup(group.id);
         await goto("/admin/groups");
         toast.success("Группа удалена");
+    }}
+/>
+
+<StudentSheet
+    studentId={openedStudent}
+    onClose={() => (openedStudent = null)}
+    onChanged={() => invalidateAll()}
+    onRemoved={async () => {
+        openedStudent = null;
+        await invalidateAll();
     }}
 />
