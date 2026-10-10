@@ -114,4 +114,13 @@ describe("страница /invite/[token]", () => {
             await screen.findByText(/Войдите под аккаунтом родителя/),
         ).toBeVisible();
     });
+
+    it("слишком много попыток (429) — просит подождать", async () => {
+        parentApi.acceptChildInvite.mockRejectedValue(httpError(429));
+
+        render(Page);
+
+        expect(await screen.findByText(/Слишком много попыток/)).toBeVisible();
+        expect(navigation.goto).not.toHaveBeenCalled();
+    });
 });

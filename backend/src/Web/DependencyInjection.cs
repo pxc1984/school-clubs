@@ -101,6 +101,7 @@ public static class DependencyInjection
             .AddPolicy(Policies.Admin, policy => RequireRole(policy, UserRole.Admin));
 
         var attemptsPerMinute = builder.Configuration.GetValue("Auth:ServiceAdminLoginAttemptsPerMinute", 5);
+        var inviteAcceptsPerMinute = builder.Configuration.GetValue("Auth:ChildInviteAcceptsPerMinute", 10);
         builder.Services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -109,6 +110,15 @@ public static class DependencyInjection
                 _ => new FixedWindowRateLimiterOptions
                 {
                     PermitLimit = attemptsPerMinute,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                }));
+            // Перебор токенов приглашений: токен и так не угадать, но лишние попытки с одного IP отсекаем.
+            options.AddPolicy(RateLimits.ChildInviteAccept, context => RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = inviteAcceptsPerMinute,
                     Window = TimeSpan.FromMinutes(1),
                     QueueLimit = 0,
                 }));

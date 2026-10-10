@@ -8,7 +8,7 @@ public static class ChildInvites
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapPost("/{token}/accept", Accept);
+        group.MapPost("/{token}/accept", Accept).RequireRateLimiting(RateLimits.ChildInviteAccept);
     }
 
     /// <remarks>Роль Parent может появиться только что — перевыпускаем сессию, не дожидаясь сверки с БД.</remarks>

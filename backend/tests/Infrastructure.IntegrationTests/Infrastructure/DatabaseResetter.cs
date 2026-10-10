@@ -19,7 +19,12 @@ internal sealed class DatabaseResetter : IAsyncDisposable
     {
         var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync();
-        var respawner = await Respawner.CreateAsync(connection);
+        // Историю миграций не чистим: иначе второй хост (WithWebHostBuilder) снова применит их к готовой схеме.
+        var respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
+        {
+            DbAdapter = DbAdapter.Postgres,
+            TablesToIgnore = [new Respawn.Graph.Table("__EFMigrationsHistory")],
+        });
         await connection.CloseAsync();
         return new DatabaseResetter(connection, respawner);
     }

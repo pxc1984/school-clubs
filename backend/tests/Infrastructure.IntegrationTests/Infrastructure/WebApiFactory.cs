@@ -20,8 +20,9 @@ public class WebApiFactory(string connectionString, string s3Url) : WebApplicati
         builder.UseSetting("Storage:S3:Bucket", "schoolclubs-test");
         builder.UseSetting("Auth:ServiceAdminPassword", ServiceAdminPassword);
         builder.UseSetting("Auth:ConsentVersion", ConsentVersion);
-        // Все тесты ходят с одного «IP»; лимит сервисного входа проверять здесь не нужно.
+        // Все тесты ходят с одного «IP»; лимиты проверяются отдельной фабрикой с маленьким лимитом.
         builder.UseSetting("Auth:ServiceAdminLoginAttemptsPerMinute", "1000");
+        builder.UseSetting("Auth:ChildInviteAcceptsPerMinute", "1000");
         // Сверять сессию с БД на каждом запросе, чтобы блокировка была видна сразу.
         builder.UseSetting("Auth:SessionValidationInterval", "00:00:00");
         // Яндекс ID (OAuth 2.0 из appsettings.json) включён фиктивным клиентом: проверяем редирект, без сети.

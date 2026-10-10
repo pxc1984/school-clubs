@@ -1,9 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using SchoolClubs.Application.Services.Auth;
 using SchoolClubs.Application.Services.ChildInvites;
 using SchoolClubs.Domain.Abstractions;
+using SchoolClubs.Domain.Entities.Access;
 using SchoolClubs.Domain.Entities.Users;
 using Task = System.Threading.Tasks.Task;
 
@@ -155,5 +157,25 @@ public class ChildInviteEndpointTests : TestBase
 
         var children = await client.GetStringAsync("/api/v1/parent/children");
         children.ShouldContain(_petr.Id.ToString());
+    }
+
+    [Test]
+    public async Task Accept_IsRateLimitedPerIp()
+    {
+        // Отдельный хост: у общей фабрики лимит поднят, а счётчик лимитера живёт в памяти приложения.
+        await using var factory = FunctionalTestSetup.Factory.WithWebHostBuilder(builder =>
+            builder.UseSetting("Auth:ChildInviteAcceptsPerMinute", "2"));
+        var user = await CreateUserAsync($"{Guid.NewGuid():N}@school218.ru", [UserRole.Parent]);
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Requested-With", "fetch");
+        (await client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest(user.Email.Address, DefaultPassword)))
+            .EnsureSuccessStatusCode();
+        var invite = await CreateInviteAsync();
+
+        // Попытки с неверным токеном тоже считаются — иначе лимит не мешал бы перебору.
+        (await AcceptAsync(client, new string('a', ChildInvite.TokenLength))).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await AcceptAsync(client, new string('b', ChildInvite.TokenLength))).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await AcceptAsync(client, invite.Token)).StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
+        (await ChildrenOfAsync(user.Id)).ShouldBeEmpty();
     }
 }

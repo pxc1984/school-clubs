@@ -50,4 +50,7 @@ public static class Policies
 public static class RateLimits
 {
     public const string ServiceAdminLogin = "service-admin-login";
+
+    /// <summary>Переход по ссылке-приглашению: попыток в минуту с одного IP.</summary>
+    public const string ChildInviteAccept = "child-invite-accept";
 }
