@@ -184,7 +184,7 @@
                 <div>
                     Ребёнок:
                     {active.score === null
-                        ? "не был"
+                        ? "пропуск"
                         : formatPercent(active.score)}
                 </div>
                 {#if active.groupMedian !== null}
@@ -205,7 +205,7 @@
                         <td>{formatDate(point.date)}</td>
                         <td>
                             {point.score === null
-                                ? "не был"
+                                ? "пропуск"
                                 : formatPercent(point.score)}
                         </td>
                         <td>
@@ -241,7 +241,7 @@
         <span class="flex items-center gap-1.5">
             <span
                 class="size-2 rounded-full border-[1.5px] border-muted-foreground"
-            ></span>Не был
+            ></span>Пропуск
         </span>
     </figcaption>
 </figure>

@@ -57,7 +57,9 @@
                 <Empty.Title>Пока нет доступа к отметкам</Empty.Title>
                 <Empty.Description>
                     Отправьте запрос: укажите кружок и ФИО ребёнка.
-                    Администратор сверит данные и откроет доступ.
+                    Администратор сверит данные и откроет доступ. Если
+                    администратор прислал ссылку-приглашение — просто откройте
+                    её.
                 </Empty.Description>
             </Empty.Header>
             <Empty.Content>
@@ -124,7 +126,7 @@
                                             <p
                                                 class="mt-1 text-base text-muted-foreground"
                                             >
-                                                Не был на последнем занятии
+                                                Последнее занятие пропущено
                                             </p>
                                         {/if}
                                         <p
@@ -136,7 +138,7 @@
                                                 ? ` · ${lesson.topic}`
                                                 : ""}{lesson.attendance ===
                                             "Late"
-                                                ? " · опоздал"
+                                                ? " · опоздание"
                                                 : ""}
                                             {#if lesson.groupAverageSolved !== null}
                                                 <br />В среднем по группе — {formatDecimal(

@@ -13,13 +13,13 @@
     import * as ToggleGroup from "$lib/components/ui/toggle-group";
     import {
         countOf,
-        formatDate,
+        formatDayMonthShort,
         formatDecimal,
         formatPercent,
         formatWeekday,
         fullName,
     } from "$lib/format";
-    import { GRADES } from "$lib/grades";
+    import { GRADE_LIST, GRADES } from "$lib/grades";
     import { POSITION_LABELS, PERIODS, type PeriodKey } from "$lib/stats";
 
     let { data } = $props();
@@ -116,11 +116,11 @@
                 {#if summary.perfectStreak}
                     <Badge variant="secondary">
                         <FlameIcon />
-                        {countOf(summary.perfectStreak, [
+                        Всё решено {countOf(summary.perfectStreak, [
                             "занятие",
                             "занятия",
                             "занятий",
-                        ])} подряд решил всё
+                        ])} подряд
                     </Badge>
                 {/if}
             </div>
@@ -128,7 +128,7 @@
                 <div>
                     <dt class="text-muted-foreground">Посещаемость</dt>
                     <dd class="font-medium">
-                        Был на {summary.lessonsAttended} из {countOf(
+                        {summary.lessonsAttended} из {countOf(
                             summary.lessonsTotal,
                             ["занятия", "занятий", "занятий"],
                         )}
@@ -154,6 +154,21 @@
 
         <section>
             <h2 class="mb-1 text-lg font-semibold">Занятия</h2>
+            {#if data.lessons.length}
+                <ul
+                    class="mb-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground"
+                    aria-label="Цвета задач"
+                >
+                    {#each GRADE_LIST as grade (grade.status)}
+                        <li class="flex items-center gap-1.5">
+                            <span
+                                class="size-2.5 rounded-full {grade.className}"
+                            ></span>
+                            {grade.label}
+                        </li>
+                    {/each}
+                </ul>
+            {/if}
             {#if !data.lessons.length}
                 <p class="text-sm text-muted-foreground">
                     Опубликованных занятий за этот период нет.
@@ -167,8 +182,10 @@
                                     class="flex min-w-0 flex-1 items-center gap-3"
                                 >
                                     <div class="w-16 shrink-0 text-sm">
-                                        <div class="font-medium">
-                                            {formatDate(lesson.date)}
+                                        <div
+                                            class="font-medium whitespace-nowrap"
+                                        >
+                                            {formatDayMonthShort(lesson.date)}
                                         </div>
                                         <div class="text-muted-foreground">
                                             {formatWeekday(lesson.date)}
@@ -201,13 +218,13 @@
                                                 <div
                                                     class="text-xs font-normal text-amber-700 dark:text-amber-400"
                                                 >
-                                                    опоздал
+                                                    опоздание
                                                 </div>
                                             {/if}
                                         {:else}
                                             <span
                                                 class="font-normal text-muted-foreground"
-                                                >не был</span
+                                                >пропуск</span
                                             >
                                         {/if}
                                     </div>
@@ -216,17 +233,17 @@
                             <Accordion.Content>
                                 {#if !lesson.attended}
                                     <p class="text-muted-foreground">
-                                        Не был на занятии
+                                        Занятие пропущено
                                     </p>
                                 {:else}
                                     {#if lesson.attendance === "Late"}
                                         <p class="mb-3 text-muted-foreground">
-                                            Опоздал на занятие.
+                                            Опоздание на занятие.
                                         </p>
                                     {/if}
                                     {#if lesson.groupAverageSolved !== null}
                                         <p class="mb-3 text-muted-foreground">
-                                            Решил {lesson.solved} из {lesson.taskCount},
+                                            Решено {lesson.solved} из {lesson.taskCount},
                                             в среднем по группе — {formatDecimal(
                                                 lesson.groupAverageSolved,
                                             )}

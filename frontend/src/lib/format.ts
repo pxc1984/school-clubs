@@ -54,6 +54,10 @@ const shortDateFormat = new Intl.DateTimeFormat("ru-RU", {
     day: "2-digit",
     month: "2-digit",
 });
+const dayMonthShortFormat = new Intl.DateTimeFormat("ru-RU", {
+    day: "numeric",
+    month: "short",
+});
 const weekdayFormat = new Intl.DateTimeFormat("ru-RU", { weekday: "short" });
 const dateTimeFormat = new Intl.DateTimeFormat("ru-RU", {
     day: "numeric",
@@ -69,6 +73,11 @@ export function formatDate(value: DateOnly): string {
     return date.getFullYear() === new Date().getFullYear()
         ? dateFormat.format(date)
         : dateWithYearFormat.format(date);
+}
+
+/** «12 сент.» — для узких колонок, где полная дата переносится */
+export function formatDayMonthShort(value: DateOnly): string {
+    return dayMonthShortFormat.format(parseDate(value));
 }
 
 /** «12.09» — для осей и заголовков колонок */
