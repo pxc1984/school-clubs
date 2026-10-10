@@ -238,6 +238,11 @@
         Опубликован {formatDateTime(gradebook.publishedAt!)}. Исправления сразу
         видны родителям.
     </p>
+{:else if gradebook.students.length}
+    <p class="-mt-3 mb-4 text-sm text-muted-foreground">
+        Черновик: родители пока не видят отметки этого занятия. Заполните журнал
+        и нажмите «Опубликовать».
+    </p>
 {/if}
 
 {#if !gradebook.students.length}
