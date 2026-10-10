@@ -43,29 +43,33 @@ cd frontend && pnpm run check       # svelte-check + tsc + prettier + eslint
 CI/CD — [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml). На каждый PR и push в `master` — тесты
 бэкенда и проверки фронта. На push в `master` дополнительно собираются образы
 `ghcr.io/pxc1984/school-clubs-{backend,frontend}:<sha>` и выкатываются на **dev**
-([`deploy.yml`](.github/workflows/deploy.yml)): по SSH на сервер копируются только `docker-compose.yml`,
-`docker-compose.prod.yml` и `traefik/`, образы скачиваются из GHCR — исходников на сервере нет.
+([`deploy.yml`](.github/workflows/deploy.yml)): job меняет тег образов в GitOps-репозитории
+[`pxc1984/homelab`](https://github.com/pxc1984/homelab) (`apps/school-clubs-<env>-{backend,frontend}/values.yaml`),
+дальше Argo CD сам выкатывает релиз в k3s.
 
 **Prod** — только вручную: Actions → CI/CD → Run workflow (`master`) с галочкой `deploy_prod`
-(только `pxc1984`); сначала тот же коммит уходит на dev, потом на prod.
+(только `pxc1984`); сначала тот же коммит уходит на dev, потом на prod. Prod-стека в кластере пока нет —
+для него нужно завести `apps/school-clubs-prod-*` в homelab и окружение `deploy-prod`.
 
 Окружения GitHub `deploy-dev` и `deploy-prod` (в `deploy-prod` — Deployment branches: только `master`),
-в каждом секреты:
+в каждом секрет `HOMELAB_DEPLOY_KEY` — приватный ключ deploy key с правом записи в `pxc1984/homelab`.
 
-| Секрет | Что |
+Конфигурация и секреты (строка подключения, `Auth__*`, ключи S3) — в values.yaml приложений в homelab,
+зашифрованы Sealed Secrets. Схема БД мигрирует при старте бэкенда.
+
+Dev — https://sc.iamamaev.ru, k3s, зона grm, namespace `school-clubs-dev`:
+
+| Приложение homelab | Что |
 |---|---|
-| `SSH_KEY` | приватный ed25519-ключ пользователя деплоя |
-| `HOST`, `USERNAME` | сервер и пользователь (в группе `docker`) |
-| `DEPLOY_PATH` | каталог на сервере, например `/opt/school-clubs-dev`; имя каталога = имя compose-проекта |
-| `ENV` | содержимое `.env` по образцу [`.env.example`](.env.example): свои пароли PostgreSQL/S3, `Auth__*` |
+| `school-clubs-dev-backend` | бэкенд; `/api`, `/scalar`, `/openapi`; ключи Data Protection на PVC |
+| `school-clubs-dev-frontend` | SPA, всё остальное на хосте |
+| `school-clubs-dev-rustfs` | RustFS (S3), данные на PVC, только внутри кластера |
 
-Dev и prod могут жить на одном сервере в разных `DEPLOY_PATH` — тогда в `ENV` dev задайте другой
-`HTTP_PORT`. На сервере наружу ничего не публикуется: traefik слушает `127.0.0.1:$HTTP_PORT`, туда проксирует
-хостовой nginx (он же терминирует HTTPS), поэтому в `ENV` — `ForwardedHeaders__ForwardLimit=2`. nginx должен
-передавать `Host`, `X-Forwarded-For` и `X-Forwarded-Proto`. Схема БД мигрирует при старте бэкенда.
+PostgreSQL — база `school_clubs_dev` в `pg-grm` (CloudNativePG на grm). Консоль:
+`kubectl -n postgres exec -it pg-grm-1 -- psql school_clubs_dev`, с машины —
+`kubectl -n postgres port-forward svc/pg-grm-rw 5432`.
 
-Dev: `pxc1984/school-clubs` → окружение `deploy-dev`, `school218clubs@109.120.137.209:/home/school218clubs/school-clubs-dev`,
-порт 52140 (https://sc.iamamaev.ru), PostgreSQL для диагностики — `109.120.137.209:59977` (`DB_BIND`/`DB_PORT` в `ENV`).
+`docker-compose.yml` остаётся для локального запуска.
 
 ## Добавить фичу
 

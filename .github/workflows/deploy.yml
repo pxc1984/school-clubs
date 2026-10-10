@@ -1,5 +1,9 @@
 name: Deploy
 
+# Деплой через GitOps: образы уже в GHCR, здесь только меняется тег в репозитории
+# pxc1984/homelab (apps/<стек>-{backend,frontend}/values.yaml) — Argo CD сам выкатывает его в k3s.
+# Ключ HOMELAB_DEPLOY_KEY — deploy key с правом записи в pxc1984/homelab.
+
 on:
   workflow_call:
     inputs:
@@ -16,59 +20,35 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
-      packages: read
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout homelab
+        uses: actions/checkout@v4
+        with:
+          repository: pxc1984/homelab
+          ssh-key: ${{ secrets.HOMELAB_DEPLOY_KEY }}
 
-      - name: Deploy via SSH
+      - name: Update image tags
         env:
-          SSH_KEY: ${{ secrets.SSH_KEY }}
-          HOST: ${{ secrets.HOST }}
-          USERNAME: ${{ secrets.USERNAME }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-          ENV_FILE: ${{ secrets.ENV }}
-          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
-          COMMIT_SHA: ${{ github.sha }}
-          GITHUB_ACTOR: ${{ github.actor }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ENVIRONMENT: ${{ inputs.environment }}
+          TAG: ${{ github.sha }}
         run: |
-          install -d -m 700 ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
-          chmod 644 ~/.ssh/known_hosts
-          SSH="ssh -i $HOME/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new"
-
-          # Только compose-файлы и конфиг traefik: образы приходят готовыми из GHCR, исходников на сервере нет.
-          $SSH "${USERNAME}@${HOST}" "mkdir -p '${DEPLOY_PATH}'"
-          rsync -az --delete-after -e "$SSH" \
-            docker-compose.yml \
-            docker-compose.prod.yml \
-            traefik \
-            "${USERNAME}@${HOST}:${DEPLOY_PATH}/"
-
-          # .env из секрета окружения + версия образов, чтобы ручные `docker compose …` на сервере
-          # видели тот же релиз.
-          {
-            printf '%s\n' "$ENV_FILE"
-            printf 'GITHUB_REPOSITORY_OWNER=%s\nCOMMIT_SHA=%s\n' "$GITHUB_REPOSITORY_OWNER" "$COMMIT_SHA"
-          } | $SSH "${USERNAME}@${HOST}" "cat > '${DEPLOY_PATH}/.env' && chmod 600 '${DEPLOY_PATH}/.env'"
-
-          # --no-build: compose не пытается собирать из (отсутствующих) исходников.
-          $SSH "${USERNAME}@${HOST}" << EOF
-            set -euo pipefail
-            cd '${DEPLOY_PATH}'
-            echo '${GITHUB_TOKEN}' | docker login ghcr.io -u '${GITHUB_ACTOR}' --password-stdin >/dev/null
-            trap 'docker logout ghcr.io >/dev/null' EXIT
-            COMPOSE='docker compose -f docker-compose.yml -f docker-compose.prod.yml'
-            # Отдельный pull с повторами: up --pull always может молча бросить недокачанный образ
-            # и упасть потом на «No such image».
-            for attempt in 1 2 3; do
-              \$COMPOSE pull --quiet && break
-              [ "\$attempt" = 3 ] && exit 1
-              sleep 10
-            done
-            \$COMPOSE up -d --no-build --remove-orphans --wait
-            docker image prune -f
-          EOF
+          stack="school-clubs-${ENVIRONMENT#deploy-}"
+          for service in backend frontend; do
+            values="apps/${stack}-${service}/values.yaml"
+            if [ ! -f "$values" ]; then
+              echo "::error::$values не найден в homelab — окружение ${ENVIRONMENT} ещё не заведено в кластере"
+              exit 1
+            fi
+            sed -i -E "s/^(  tag: )[^ ]+/\1${TAG}/" "$values"
+          done
+          git diff --exit-code && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "${stack}: deploy ${TAG::7}"
+          # параллельный деплой другого приложения мог успеть запушить раньше
+          for attempt in 1 2 3; do
+            git push && exit 0
+            git pull --rebase
+          done
+          exit 1
