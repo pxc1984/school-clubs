@@ -467,7 +467,7 @@
         </div>
     </div>
 
-    <div class="w-fit max-w-full overflow-x-auto rounded-lg border">
+    <div class="relative w-fit max-w-full overflow-x-auto rounded-lg border">
         <table
             bind:this={table}
             class="w-max border-separate border-spacing-0 text-sm"

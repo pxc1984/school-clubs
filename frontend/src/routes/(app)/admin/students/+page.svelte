@@ -111,7 +111,7 @@
         </Empty.Header>
     </Empty.Root>
 {:else}
-    <div class="overflow-x-auto rounded-lg border">
+    <div class="relative overflow-x-auto rounded-lg border">
         <Table.Root>
             <Table.Header>
                 <Table.Row>
