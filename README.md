@@ -63,7 +63,10 @@ Dev — https://sc.iamamaev.ru, k3s, зона grm, namespace `school-clubs-dev`:
 |---|---|
 | `school-clubs-dev-backend` | бэкенд; `/api`, `/scalar`, `/openapi`; ключи Data Protection на PVC |
 | `school-clubs-dev-frontend` | SPA, всё остальное на хосте |
-| `school-clubs-dev-rustfs` | RustFS (S3), данные на PVC, только внутри кластера |
+
+Файлы (журналы, аватарки) — бакет `school-clubs-dev` в общем S3 кластера (RustFS на grm,
+`https://s3.iamamaev.ru`, изнутри — `http://rustfs.s3.svc.cluster.local:9000`; см. `s3/README.md` в homelab).
+`Storage__S3__CreateBucket=false`: бакет создан заранее, пользователю S3 доступен только он.
 
 PostgreSQL — база `school_clubs_dev` в `pg-grm` (CloudNativePG на grm). Консоль:
 `kubectl -n postgres exec -it pg-grm-1 -- psql school_clubs_dev`, с машины —
