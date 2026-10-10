@@ -187,9 +187,14 @@
                 Опубликовать
             </Button>
         {/if}
-        <Button variant="outline" onclick={() => (importOpen = true)}>
+        <Button
+            variant="outline"
+            onclick={() => (importOpen = true)}
+            title="Загрузить XLSX"
+        >
             <UploadIcon />
-            Загрузить XLSX
+            <!-- на телефоне только иконка, чтобы «⋯» не уезжало на новую строку -->
+            <span class="sr-only sm:not-sr-only">Загрузить XLSX</span>
         </Button>
         <DropdownMenu.Root>
             <DropdownMenu.Trigger>
